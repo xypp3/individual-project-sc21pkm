@@ -28,8 +28,17 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
+function getBitrate(){
+    return parseInt(localStorage.getItem("bitrate"));
+}
+function incrementBitrate(number){
+    let rate = getBitrate() + number;
+    // if (rate < 0){ rate = 0; }
+    localStorage.setItem("bitrate", rate);
+    return rate;
+}
 
-export let LowestBitrateRule;
+var LowestBitrateRule;
 
 // Rule that selects the lowest possible bitrate
 function LowestBitrateRuleClass() {
@@ -40,8 +49,9 @@ function LowestBitrateRuleClass() {
     let StreamController = factory.getSingletonFactoryByName('StreamController');
     let context = this.context;
     let instance;
+    localStorage.setItem("bitrate", 0);
 
-    console.log("in class");
+    console.log("class");
 
     function setup() {
     }
@@ -53,16 +63,31 @@ function LowestBitrateRuleClass() {
         var mediaType = rulesContext.getMediaInfo().type;
         var metrics = metricsModel.getMetricsFor(mediaType, true);
 
-        console.log("in switch request rules");
+        
         // A smarter (real) rule could need analyze playback metrics to take
         // bitrate switching decision. Printing metrics here as a reference
+        const chunk_len = 4;
+        const prev_buffer = metrics.BufferLevel[metrics.BufferLevel.length - 1].level;
+        console.log(prev_buffer);
+        if( prev_buffer >= chunk_len * 50 * 1000){
+            incrementBitrate(1);
+        }else if(prev_buffer < chunk_len * 10 * 1000){
+            incrementBitrate(-1);
+        }
+
         console.log(metrics);
+        console.log(metricsModel);
 
         // Get current bitrate
         let streamController = StreamController(context).getInstance();
         let abrController = rulesContext.getAbrController();
-        let current = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
+        console.log(streamController);
+        console.log(abrController);
 
+        let current = getBitrate();
+        console.log(current);
+        // let current = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
+        //
         // If already in lowest bitrate, don't do anything
         if (current === 0) {
             return SwitchRequest(context).create();
@@ -70,7 +95,7 @@ function LowestBitrateRuleClass() {
 
         // Ask to switch to the lowest bitrate
         let switchRequest = SwitchRequest(context).create();
-        switchRequest.quality = 0;
+        switchRequest.quality = current;
         switchRequest.reason = 'Always switching to the lowest bitrate';
         switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
         return switchRequest;
