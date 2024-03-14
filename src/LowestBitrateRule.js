@@ -83,19 +83,25 @@ function LowestBitrateRuleClass() {
         let abrController = rulesContext.getAbrController();
         console.log(streamController);
         console.log(abrController);
+        let rep = abrController.getPossibleVoRepresentations(rulesContext.getMediaInfo(), true);
+
+        for (let i = 0; i < rep.length; i++) {
+            console.log(rep[i]);
+            console.log("HIIIII");
+        }
 
         let current = getBitrate();
         console.log(current);
         // let current = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
         //
         // If already in lowest bitrate, don't do anything
-        if (current === 0) {
-            return SwitchRequest(context).create();
-        }
+        // if (current === 0) {
+        //     return SwitchRequest(context).create();
+        // }
 
         // Ask to switch to the lowest bitrate
         let switchRequest = SwitchRequest(context).create();
-        switchRequest.quality = current;
+        switchRequest.quality = 0;
         switchRequest.reason = 'Always switching to the lowest bitrate';
         switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
         return switchRequest;

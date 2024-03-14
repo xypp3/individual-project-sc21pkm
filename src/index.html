@@ -18,31 +18,65 @@
 
 			/* don't use dash.js default rules */
 			// player.updateSettings({ 'streaming': { 'abr': { 'useDefaultABRRules': false }}});
-			//
 			player.updateSettings({
-			abr: {
-		    	    activeRules: {
-		    	        throughputRule: {
-		    	    	active: false
-		    	        },
-		    	        bolaRule: {
-		    	    	active: false
-		    	        },
-		    	        insufficientBufferRule: {
-		    	    	active: false
-		    	        },
-		    	        switchHistoryRule: {
-		    	    	active: false
-		    	        },
-		    	        droppedFramesRule: {
-		    	    	active: false
-		    	        },
-		    	        abandonRequestsRule: {
-		    	    	active: false
-		    	        }
-		    	    }
-		    	}
+			    streaming: {
+				abr: {
+				    useDefaultABRRules: false
+				}
+			    }
 			});
+			// player.updateSettings({
+			//     streaming : { abr: {
+			// 	    activeRules: {
+			// 		throughputRule: {
+			// 		active: false
+			// 		},
+			// 		bolaRule: {
+			// 		active: false
+			// 		},
+			// 		insufficientBufferRule: {
+			// 		active: false
+			// 		},
+			// 		switchHistoryRule: {
+			// 		active: false
+			// 		},
+			// 		droppedFramesRule: {
+			// 		active: false
+			// 		},
+			// 		abandonRequestsRule: {
+			// 		active: false
+			// 		}
+			// 	    },
+			// 	}
+			// }
+			// });
+			player.updateSettings({
+			streaming: { abr : { rules: {
+			      throughputRule: {
+				  active: false
+			      },
+			      bolaRule: {
+				  active: false
+			      },
+			      insufficientBufferRule: {
+				  active: false,
+			      },
+			      switchHistoryRule: {
+				  active: false,
+			      },
+			      droppedFramesRule: {
+				  active: false,
+			      },
+			      abandonRequestsRule: {
+				  active: false,
+			      },
+			      l2ARule: {
+				  active: false
+			      },
+			      loLPRule: {
+				  active: false
+			      }
+			}}}});
 
 			/* add my custom quality switch rule. Look at LowestBitrateRule.js to know more */
 			/* about the structure of a custom rule */
