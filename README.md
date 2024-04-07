@@ -2,10 +2,18 @@
 
 
 ## TODO:
-- [ ] see why my it isn't updating chunks with my rule???
 - [ ] ?optional? What is the difference between a modal and a class?
+- [ ] Understand v3 way of making rule using BOLA
+- [ ] Export data from js client
+- [ ] Aggregate data using python
+- [ ] Split video using HAS
+- [ ] Simple http server to server video
+- [ ] Puppeteer the client side
+- [ ] Write simple BBA
 
 
-## Getting started with typescript/webpack
-- <https://github.com/Dash-Industry-Forum/dash.js/tree/development/samples/modules>
-    - <https://blog.logrocket.com/using-webpack-typescript/>
+### Extras
+- [ ] Docker the whole testbed to allow reproduceability
+
+
+## Project startup
