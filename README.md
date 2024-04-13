@@ -2,7 +2,6 @@
 
 
 ## TODO:
-- [ ] ?optional? What is the difference between a modal and a class?
 - [ ] Understand v3 way of making rule using BOLA
 - [ ] Export data from js client
 - [ ] Aggregate data using python
