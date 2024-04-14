@@ -10,8 +10,5 @@
   },
   "devDependencies": {
     "vite": "^5.2.0"
-  },
-  "dependencies": {
-    "dash": "^3.25.22"
   }
 }
