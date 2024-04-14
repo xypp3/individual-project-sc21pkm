@@ -30,7 +30,7 @@
  */
 import dashjs from "dashjs";
 import { FactoryMaker } from "dashjs";
-from "../node_modules/dashjs/dist/dash.all.min.js";
+import dashjs from "../node_modules/dashjs/dist/dash.all.min.js";
 var LowestBitrateRule;
 
 // Rule that selects the lowest possible bitrate

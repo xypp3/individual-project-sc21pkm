@@ -31,18 +31,18 @@
 
 // For a description of the BOLA adaptive bitrate (ABR) algorithm, see http://arxiv.org/abs/1601.06748
 
-import Constants from "dashjs";
-import MetricsConstants from '../../constants/MetricsConstants.js';
-import SwitchRequest from '../SwitchRequest.js';
-import FactoryMaker from '../../../core/FactoryMaker.js';
-import {HTTPRequest} from '../../vo/metrics/HTTPRequest.js';
-import EventBus from '../../../core/EventBus.js';
-import Events from '../../../core/events/Events.js';
-import Debug from '../../../core/Debug.js';
-import MediaPlayerEvents from '../../MediaPlayerEvents.js';
-import Constants from '../../constants/Constants.js';
-import AbrController from '../../controllers/AbrController.js';
-'../node_modules/dash/'
+// path: "../dash.js-development/src/streaming/rules/abr/"
+//import Constants from "../dash.js-development/index.js";
+import MetricsConstants from '../dash.js-development/src/streaming/constants/MetricsConstants.js';
+import SwitchRequest from '../dash.js-development/src/streaming/rules/SwitchRequest.js';
+import FactoryMaker from '../dash.js-development/src/core/FactoryMaker.js';
+import { HTTPRequest } from '../dash.js-development/src/streaming/vo/metrics/HTTPRequest.js';
+import EventBus from '../dash.js-development/src/core/EventBus.js';
+import Events from '../dash.js-development/src/core/events/Events.js';
+import Debug from '../dash.js-development/src/core/Debug.js';
+import MediaPlayerEvents from '../dash.js-development/src/streaming/MediaPlayerEvents.js';
+import Constants from '../dash.js-development/src/streaming/constants/Constants.js';
+import AbrController from '../dash.js-development/src/streaming/controllers/AbrController.js';
 // BOLA_STATE_ONE_BITRATE   : If there is only one bitrate (or initialization failed), always return NO_CHANGE.
 // BOLA_STATE_STARTUP       : Set placeholder buffer such that we download fragments at most recently measured throughput.
 // BOLA_STATE_STEADY        : Buffer primed, we switch to steady operation.
@@ -564,6 +564,7 @@ function BolaRule(config) {
                     _handleBolaStateStartup(switchRequest, rulesContext, bolaState);
                     break;
                 case BOLA_STATE_STEADY:
+                    console.log("MY bola rule");
                     _handleBolaStateSteady(switchRequest, rulesContext, bolaState)
                     break;
                 default:
