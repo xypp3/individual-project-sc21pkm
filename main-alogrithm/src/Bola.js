@@ -42,7 +42,7 @@ import Debug from '../../../core/Debug.js';
 import MediaPlayerEvents from '../../MediaPlayerEvents.js';
 import Constants from '../../constants/Constants.js';
 import AbrController from '../../controllers/AbrController.js';
-
+'../node_modules/dash/'
 // BOLA_STATE_ONE_BITRATE   : If there is only one bitrate (or initialization failed), always return NO_CHANGE.
 // BOLA_STATE_STARTUP       : Set placeholder buffer such that we download fragments at most recently measured throughput.
 // BOLA_STATE_STEADY        : Buffer primed, we switch to steady operation.

@@ -1,6 +1,6 @@
 import dashjs from 'dashjs'
 
-import LowestBitrateRule from './src/myRule.js';
+import LowestBitrateRule from './myRule.js';
 
 let url = "https://dash.akamaized.net/envivio/Envivio-dash2/manifest.mpd";
 let player = dashjs.MediaPlayer().create();
