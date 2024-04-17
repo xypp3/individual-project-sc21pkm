@@ -28,14 +28,11 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-import dashjs from "dashjs";
-import { FactoryMaker } from "dashjs";
-import dashjs from "../node_modules/dashjs/dist/dash.all.min.js";
 var LowestBitrateRule;
 
 // Rule that selects the lowest possible bitrate
 function LowestBitrateRuleClass() {
-    let factory = FactoryMaker;
+    let factory = dashjs.FactoryMaker;
     let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
     let MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
     let StreamController = factory.getSingletonFactoryByName('StreamController');
@@ -45,7 +42,7 @@ function LowestBitrateRuleClass() {
     console.log("class run");
 
     function setup() {
-      console.log("setup run");
+        console.log("setup run");
     }
 
     // Always use lowest bitrate
