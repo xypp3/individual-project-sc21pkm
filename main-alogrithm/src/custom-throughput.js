@@ -28,53 +28,36 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-// import dashjs from "dashjs";
 
-var LowestBitrateRule;
+var CustomThroughputRule;
 
-// Rule that selects the lowest possible bitrate
-function LowestBitrateRuleClass() {
+function CustomThroughputRuleClass() {
+
     let factory = dashjs.FactoryMaker;
     let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
     let MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
-    let StreamController = factory.getSingletonFactoryByName('StreamController');
-    let context = this.context;
-    let instance;
 
-    console.log("class run");
+    let Debug = factory.getSingletonFactoryByName('Debug');
+
+    let context = this.context;
+    let instance,
+        logger;
 
     function setup() {
-        console.log("setup run");
+        logger = Debug(context).getInstance().getLogger(instance);
     }
 
-    // Always use lowest bitrate
     function getSwitchRequest(rulesContext) {
-        console.log("switch request run");
         // here you can get some informations aboit metrics for example, to implement the rule
         let metricsModel = MetricsModel(context).getInstance();
         var mediaType = rulesContext.getMediaInfo().type;
         var metrics = metricsModel.getMetricsFor(mediaType, true);
 
-        // A smarter (real) rule could need analyze playback metrics to take
-        // bitrate switching decision. Printing metrics here as a reference
+        // this sample only display metrics in console
         console.log(metrics);
+        console.log("plsplspls");
 
-        // Get current bitrate
-        let streamController = StreamController(context).getInstance();
-        let abrController = rulesContext.getAbrController();
-        let current = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
-
-        // If already in lowest bitrate, don't do anything
-        if (current === 0) {
-            return SwitchRequest(context).create();
-        }
-
-        // Ask to switch to the lowest bitrate
-        let switchRequest = SwitchRequest(context).create();
-        switchRequest.quality = 0;
-        switchRequest.reason = 'Always switching to the lowest bitrate';
-        switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
-        return switchRequest;
+        return SwitchRequest(context).create();
     }
 
     instance = {
@@ -86,8 +69,5 @@ function LowestBitrateRuleClass() {
     return instance;
 }
 
-LowestBitrateRuleClass.__dashjs_factory_name = 'LowestBitrateRule';
-LowestBitrateRule = dashjs.FactoryMaker.getClassFactory(LowestBitrateRuleClass);
-export { LowestBitrateRule };
-
-
+CustomThroughputRuleClass.__dashjs_factory_name = 'CustomThroughputRule';
+CustomThroughputRule = dashjs.FactoryMaker.getClassFactory(CustomThroughputRuleClass);
