@@ -44,6 +44,8 @@ function RandomBitrateRuleClass() {
     function setup() {
     }
 
+    // DO NOT DELETE SEEMINGLY USELESS getMaxIndex()
+    //  When dashjs library is built getSwitchRequest() gets replaced with getMaxIndex(). Why??? God knows, but I'll ask them on GitHub and see if there a method in this madness
     function getMaxIndex(rulesContext) {
         return getSwitchRequest(rulesContext);
     }
@@ -81,6 +83,8 @@ function RandomBitrateRuleClass() {
 
     instance = {
         getSwitchRequest,
+        // DO NOT DELETE SEEMINGLY USELESS getMaxIndex()
+        //  When dashjs library is built getSwitchRequest() gets replaced with getMaxIndex(). Why??? God knows, but I'll ask them on GitHub and see if there a method in this madness
         getMaxIndex
     };
 
