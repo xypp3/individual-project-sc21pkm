@@ -54,4 +54,35 @@ player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(pl
 
 player.initialize(document.querySelector('video'), url, false);
 
-setInterval(() => { console.log(array); }, 8000);
+
+/* Epic code gotten from:
+ * <https://stackoverflow.com/questions/21012580/is-it-possible-to-write-data-to-file-using-only-javascript>
+ *      (Look I tried understing the MDN APIs, it's midnight, the brain is not braining
+ *
+ *  Saves file to ~/Downloads
+*/
+function saveTextAsFile(text, filename) {
+    var textToWrite = text;
+    var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
+    var fileNameToSaveAs = filename;
+    var downloadLink = document.createElement("a");
+    downloadLink.download = fileNameToSaveAs;
+    downloadLink.innerHTML = "Download File";
+    if (window.webkitURL != null) {
+        // Chrome allows the link to be clicked
+        // without actually adding it to the DOM.
+        downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+    }
+    else {
+        // Firefox requires the link to be added to the DOM
+        // before it can be clicked.
+        downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+        downloadLink.onclick = destroyClickedElement;
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+    }
+
+    downloadLink.click();
+}
+
+saveTextAsFile("try save new", "~/pkm/test.txt");
