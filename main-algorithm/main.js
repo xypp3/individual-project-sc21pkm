@@ -1,22 +1,10 @@
 import dashjs from "dashjs";
 import RandomBitrateRule from "./RandomBitrateRule.js";
 
-const url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd";
-const settings = { 'streaming': { 'abr': { 'useDefaultABRRules': false } } };
-const rule_type = 'qualitySwitchRules';
-let player = dashjs.MediaPlayer().create();
-
-player.updateSettings(settings);
-
-player.addABRCustomRule(rule_type, 'RandomBitrateRule', RandomBitrateRule);
-// player.on(dashjs.MediaPlayer.events["REPRESENTATION_SWITCH"], console.log);
-// player.on(dashjs.MediaPlayer.events["QUALITY_CHANGE_RENDERED"], console.log);
-// player.on(dashjs.MediaPlayer.events["BUFFER_LEVEL_UPDATED"], console.log);
-// player.on(dashjs.MediaPlayer.events["QUALITY_CHANGE_REQUESTED"], console.log);
-
-function getMetrics(player) {
-    return function(e) {
+function getMetrics(player, array, logging) {
+    return function(event) {
         try {
+            // see monitor sample: <http://reference.dashif.org/dash.js/nightly/samples/advanced/monitoring.html>
             var streamInfo = player.getActiveStream().getStreamInfo();
             var dashMetrics = player.getDashMetrics();
             var dashAdapter = player.getDashAdapter();
@@ -33,12 +21,19 @@ function getMetrics(player) {
                 })
                 var frameRate = currentRep.frameRate;
                 var resolution = currentRep.width + 'x' + currentRep.height;
-                console.log(bufferLevel + " secs");
-                console.log(frameRate + " fps");
-                console.log(bitrate + " Kbps");
-                console.log(resolution);
-                console.log(playbackTime + "secs");
-                console.log(bufferLevel + playbackTime + "secs");
+
+                if (logging) {
+                    console.log(bufferLevel + " secs");
+                    console.log(bitrate + " Kbps");
+                    console.log(playbackTime + "secs");
+                    console.log(frameRate + " fps");
+                    console.log(resolution);
+                }
+                array.push(bufferLevel);
+                array.push(bitrate);
+                array.push(playbackTime);
+                array.push(frameRate);
+                array.push(resolution);
             }
         } catch {
             console.error("Media Player or Array error")
@@ -46,15 +41,17 @@ function getMetrics(player) {
 
     }
 }
-player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player));
-player.initialize(document.querySelector('video'), url, false);
+const url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd";
+const settings = { 'streaming': { 'abr': { 'useDefaultABRRules': false } } };
+const rule_type = 'qualitySwitchRules';
+let array = [];
+let player = dashjs.MediaPlayer().create();
+
 // TODO: find out how to have longer buffer than 12 seconds
+player.updateSettings(settings);
+player.addABRCustomRule(rule_type, 'RandomBitrateRule', RandomBitrateRule);
+player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, false));
 
+player.initialize(document.querySelector('video'), url, false);
 
-/* Events of interest:
- *   - QUALITY_CHANGE_RENDERED
- *      - gives only quality index nothing more
- *   - THROUGHPUT_MEASUREMENT_STORED
- *   - REPRESENTATION_SWITCH
- *      - Only on CHANGE of quality but you can get bitrate data
-*/
+setInterval(() => { console.log(array); }, 8000);
