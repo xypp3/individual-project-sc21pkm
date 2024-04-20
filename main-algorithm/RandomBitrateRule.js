@@ -29,17 +29,21 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-var RandomBitrateRule;
 
 // Rule that selects the lowest possible bitrate
-function RandomBitrateRuleClass() {
+function RandomBitrateRule(config) {
 
+    // console.log("Config::");
+    // console.log(config);
     let factory = dashjs.FactoryMaker;
     let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
     let MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
     let StreamController = factory.getSingletonFactoryByName('StreamController');
+
     let context = this.context;
     let instance;
+    // console.log("Class context:");
+    // console.log(context);
 
     function setup() {
     }
@@ -51,6 +55,8 @@ function RandomBitrateRuleClass() {
     }
     // Always use lowest bitrate
     function getSwitchRequest(rulesContext) {
+        // console.log("Rules Context:");
+        // console.log(rulesContext);
         // here you can get some informations aboit metrics for example, to implement the rule
         // let metricsModel = MetricsModel(context).getInstance();
         // var mediaType = rulesContext.getMediaInfo().type;
@@ -60,9 +66,9 @@ function RandomBitrateRuleClass() {
         // bitrate switching decision. Printing metrics here as a reference
         // console.log(metrics);
         //
-        console.log("plspls");
-        console.log("plspls HELL YEAH!!!");
-        console.log("plspls");
+        // console.log("plspls");
+        // console.log("plspls HELL YEAH!!!");
+        // console.log("plspls");
         // Get current bitrate
         // let streamController = StreamController(context).getInstance();
         // let abrController = rulesContext.getAbrController();
@@ -75,17 +81,22 @@ function RandomBitrateRuleClass() {
 
         // Ask to switch to the lowest bitrate
         let switchRequest = SwitchRequest(context).create();
-        switchRequest.quality = Math.floor(Math.random() * 10);
-        switchRequest.reason = 'Always switching to the lowest bitrate';
+        switchRequest.quality = 3; // Math.floor(Math.random() * 10);
+        switchRequest.reason = 'Always switch to a random bitrate';
         switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
         return switchRequest;
+    }
+
+    function reset() {
+        // TODO: Investigate: reset data probably BUT I don't know how often it resets
     }
 
     instance = {
         getSwitchRequest,
         // DO NOT DELETE SEEMINGLY USELESS getMaxIndex()
         //  When dashjs library is built getSwitchRequest() gets replaced with getMaxIndex(). Why??? God knows, but I'll ask them on GitHub and see if there a method in this madness
-        getMaxIndex
+        getMaxIndex,
+        reset
     };
 
     setup();
@@ -93,6 +104,6 @@ function RandomBitrateRuleClass() {
     return instance;
 }
 
-RandomBitrateRuleClass.__dashjs_factory_name = 'RandomBitrateRule';
-export default RandomBitrateRule = dashjs.FactoryMaker.getClassFactory(RandomBitrateRuleClass);
+RandomBitrateRule.__dashjs_factory_name = 'RandomBitrateRule';
+export default dashjs.FactoryMaker.getClassFactory(RandomBitrateRule);
 
