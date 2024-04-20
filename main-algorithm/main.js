@@ -55,6 +55,24 @@ player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(pl
 player.initialize(document.querySelector('video'), url, false);
 
 
+function arrayToCsv(array) {
+    if (array.length % 5 != 0) {
+        return "data format is wrong, abort CSV conversion";
+    }
+
+    let str = "Buffer Level, Bitrate, Playback Timestamp, Frame Rate, Resolution\n";
+    for (let i = 0; i < array.length; i++) {
+        str += array[i];
+
+        if (i % 5 === 4) {
+            str += "\n";
+        } else {
+            str += ",";
+        }
+    }
+
+    return str;
+}
 /* Epic code gotten from:
  * <https://stackoverflow.com/questions/21012580/is-it-possible-to-write-data-to-file-using-only-javascript>
  *      (Look I tried understing the MDN APIs, it's midnight, the brain is not braining
@@ -84,5 +102,4 @@ function saveTextAsFile(text, filename) {
 
     downloadLink.click();
 }
-
-saveTextAsFile("try save new", "~/pkm/test.txt");
+setTimeout(function() { saveTextAsFile(arrayToCsv(array), "~/pkm/test.csv") }, 20000);
