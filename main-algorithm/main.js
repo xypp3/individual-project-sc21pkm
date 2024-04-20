@@ -30,6 +30,8 @@ function getMetrics(player, array, logging) {
                     console.log(resolution);
                 }
                 array.push(bufferLevel);
+                // this is the bitrate for the fragment at (bufferLevel + playbackTime)
+                //      where a fragment is smaller than a chunk +-1sec where a chunk now is 4sec
                 array.push(bitrate);
                 array.push(playbackTime);
                 array.push(frameRate);
@@ -44,13 +46,16 @@ function getMetrics(player, array, logging) {
 const url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd";
 const settings = { 'streaming': { 'abr': { 'useDefaultABRRules': false } } };
 const rule_type = 'qualitySwitchRules';
+const ruleName = 'RandomBitrateRule';
+let rule = RandomBitrateRule;
 let array = [];
 let player = dashjs.MediaPlayer().create();
 
 // TODO: find out how to have longer buffer than 12 seconds
 player.updateSettings(settings);
-player.addABRCustomRule(rule_type, 'RandomBitrateRule', RandomBitrateRule);
+player.addABRCustomRule(rule_type, ruleName, rule);
 player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, false));
+player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}.csv`); });
 
 player.initialize(document.querySelector('video'), url, false);
 
@@ -102,4 +107,3 @@ function saveTextAsFile(text, filename) {
 
     downloadLink.click();
 }
-setTimeout(function() { saveTextAsFile(arrayToCsv(array), "~/pkm/test.csv") }, 20000);

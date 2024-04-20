@@ -81,7 +81,7 @@ function RandomBitrateRule(config) {
 
         // Ask to switch to the lowest bitrate
         let switchRequest = SwitchRequest(context).create();
-        switchRequest.quality = 3; // Math.floor(Math.random() * 10);
+        switchRequest.quality = Math.floor(Math.random() * 10);
         switchRequest.reason = 'Always switch to a random bitrate';
         switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
         return switchRequest;
