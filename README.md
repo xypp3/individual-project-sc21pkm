@@ -2,7 +2,7 @@
 
 
 ## TODO:
-- [x] Understand v3 way of making rule using BOLA
+- [ ] [Checkout relevant example](https://github.com/Dash-Industry-Forum/dash.js/blob/e2e45217b41b1612d8df7802d3cfda97fdb63651/src/streaming/rules/abr/ThroughputRule.js#L36)
 - [ ] Export data from js client
 - [ ] Aggregate data using python
 - [ ] Split video using HAS
