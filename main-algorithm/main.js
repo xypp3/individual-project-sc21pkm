@@ -104,18 +104,40 @@ const settingsABR = { streaming: { abr: { useDefaultABRRules: false }, } };
 const settingsBuffer = { streaming: { buffer: { initialBufferLevel: NaN, stableBufferTime: 20, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 90 } } };
 const ruleType = 'qualitySwitchRules';
 
+// default values
 let ruleName = 'RandomBitrateRule';
 let rule = RandomBitrateRule;
-let simulationDesc = "bandwidth-or-something";
-// TODO: Figure out a way to pick rules maybe with pupeteer at this point?
-//      maybe with text boxes (which puppeteer can input into)
+let simulationDesc = "default-desc";
 
 let array = []; //TODO: Figure out how to do static array 
 let player = dashjs.MediaPlayer().create();
 
-player.updateSettings(settingsGeneral);
-player.updateSettings(settingsABR);
-player.updateSettings(settingsBuffer);
-player.addABRCustomRule(ruleType, ruleName, rule);
-player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true));
-player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}.csv`); });
+document.querySelector("#selectRule").addEventListener("change", (e) => {
+    let selected = e.target.value;
+    if (selected === "RandomBitrateRule") {
+        console.log("selected RandomBitrateRule");
+        ruleName = selected;
+        rule = RandomBitrateRule;
+    } else {
+        console.log("Rule not selected");
+    }
+
+});
+
+document.querySelector("#text-sim-desc").addEventListener("input", (e) => {
+    simulationDesc = e.target.value;
+});
+
+document.querySelector("button").addEventListener("click", () => {
+    player.updateSettings(settingsGeneral);
+    player.updateSettings(settingsABR);
+    player.updateSettings(settingsBuffer);
+
+    player.addABRCustomRule(ruleType, ruleName, rule);
+
+    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true));
+    player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}.csv`); });
+
+
+    player.initialize(document.querySelector("video"), url, true);
+});
