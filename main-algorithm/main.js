@@ -29,13 +29,14 @@ function getMetrics(player, array, logging) {
                     console.log(frameRate + " fps");
                     console.log(resolution);
                 }
+                array.push(array.length / 6);
                 array.push(bufferLevel);
                 // this is the bitrate for the fragment at (bufferLevel + playbackTime)
                 //      where a fragment is smaller than a chunk +-1sec where a chunk now is 4sec
                 array.push(bitrate);
                 array.push(playbackTime);
                 array.push(frameRate);
-                array.push(resolution);
+                array.push(`"${resolution}"`);
             }
         } catch {
             console.error("Media Player or Array error")
@@ -46,15 +47,20 @@ function getMetrics(player, array, logging) {
 
 
 function arrayToCsv(array) {
-    if (array.length % 5 != 0) {
+    let arrayLen = 6;
+    if (array.length % arrayLen != 0) {
         return "data format is wrong, abort CSV conversion";
     }
 
-    let str = "Buffer Level, Bitrate, Playback Timestamp, Frame Rate, Resolution\n";
+    let str = "Index, Buffer Level, Bitrate, Playback Timestamp, Frame Rate, Resolution\n";
+    if (str.match(new RegExp(",", "g")).length != arrayLen - 1) {
+        return "data column titles don't match the number of data columns";
+    }
+
     for (let i = 0; i < array.length; i++) {
         str += array[i];
 
-        if (i % 5 === 4) {
+        if (i % arrayLen === arrayLen - 1) {
             str += "\n";
         } else {
             str += ",";
