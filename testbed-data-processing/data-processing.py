@@ -18,7 +18,8 @@ print("Data copied from downloads into raw_data")
 
 # group raw data files together
 data_grouped = {}
-data_group_names = []
+data_grouped_names = []
+
 for f in glob.glob(dir_raw_data + "*", recursive=False):
     m = re.search(r"dashjs_data_(.+)_(.+)_.*\.csv", f)
 
@@ -28,18 +29,37 @@ for f in glob.glob(dir_raw_data + "*", recursive=False):
 
     rule = m.group(1)
     desc = m.group(2)
-    print(rule, desc)
     try:
         data_grouped[desc][rule].append(f)
     except:
         data_grouped[desc] = {rule: [f]}
-        for i in range(len(data_group_names)):
-            if desc == data_group_names[i][0]:
-                data_group_names[i][1].append(rule)
 
-        data_group_names.append((desc, [rule]))
+        # check if name already exists
+        found = False
+        for i in range(len(data_grouped_names)):
+            if desc == data_grouped_names[i][0]:
+                data_grouped_names[i][1].append(rule)
+                found = True
 
-print(data_grouped, data_group_names)
+        if not found:
+            data_grouped_names.append((desc, [rule]))
+
+"""
+- group files into averages
+- for averages sort into different graphs
+- buffer health graph
+    - compare diff bandwidths
+    - compare diff rules
+- sliding window size different graph
+- 
+
+"""
+df_grouped_all = {}
+print("New")
+print(data_grouped_names)
+for desc, ruleList in data_grouped_names:
+    print(desc, ruleList)
+
 #
 # # Read the CSV file into a DataFrame
 # df = pd.read_csv(dir_raw_data + "dashjs_data_RandomBitrateRule_default-desc(4).csv")
