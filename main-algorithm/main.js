@@ -150,7 +150,7 @@ document.querySelector("button").addEventListener("click", () => {
     player.addABRCustomRule(ruleType, ruleName, rule);
 
     player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true));
-    player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}.csv`); });
+    player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}_.csv`); });
 
 
     player.initialize(document.querySelector("video"), url, true);
