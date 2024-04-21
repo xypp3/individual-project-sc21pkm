@@ -23,7 +23,7 @@ function getMetrics(player, array, logging) {
                 var resolution = currentRep.width + 'x' + currentRep.height;
 
                 if (logging) {
-                    console.log(bufferLevel + " secs");
+                    console.log("Buffer level: " + bufferLevel + " secs");
                     console.log(bitrate + " Kbps");
                     console.log(playbackTime + "secs");
                     console.log(frameRate + " fps");
@@ -43,25 +43,6 @@ function getMetrics(player, array, logging) {
 
     }
 }
-const url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd";
-const settings = { 'streaming': { 'abr': { 'useDefaultABRRules': false } } };
-const rule_type = 'qualitySwitchRules';
-const ruleName = 'RandomBitrateRule';
-let rule = RandomBitrateRule;
-let simulationDesc = "bandwidth or something";
-// TODO: Figure out a way to pick rules maybe with pupeteer at this point?
-//      maybe with text boxes (which puppeteer can input into)
-
-let array = []; //TODO: Figure out how to do static array 
-let player = dashjs.MediaPlayer().create();
-
-// TODO: find out how to have longer buffer than 12 seconds
-player.updateSettings(settings);
-player.addABRCustomRule(rule_type, ruleName, rule);
-player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, false));
-player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}.csv`); });
-
-player.initialize(document.querySelector('video'), url, false);
 
 
 function arrayToCsv(array) {
@@ -111,3 +92,26 @@ function saveTextAsFile(text, filename) {
 
     downloadLink.click();
 }
+
+
+const url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd";
+const settingsABR = { streaming: { abr: { useDefaultABRRules: false }, } };
+const settingsBuffer = { streaming: { buffer: { initialBufferLevel: NaN, stableBufferTime: 20, longFormContentDurationThreshhold: 600, bufferTimeAtTopQualityLongForm: 90 } } };
+const ruleType = 'qualitySwitchRules';
+
+let ruleName = 'RandomBitrateRule';
+let rule = RandomBitrateRule;
+let simulationDesc = "bandwidth-or-something";
+// TODO: Figure out a way to pick rules maybe with pupeteer at this point?
+//      maybe with text boxes (which puppeteer can input into)
+
+let array = []; //TODO: Figure out how to do static array 
+let player = dashjs.MediaPlayer().create();
+
+player.updateSettings(settingsABR);
+player.updateSettings(settingsBuffer);
+player.addABRCustomRule(ruleType, ruleName, rule);
+player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true));
+player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}.csv`); });
+
+player.initialize(document.querySelector('video'), url, false);
