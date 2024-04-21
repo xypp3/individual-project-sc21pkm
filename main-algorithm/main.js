@@ -105,13 +105,16 @@ const settingsBuffer = { streaming: { buffer: { initialBufferLevel: NaN, stableB
 const ruleType = 'qualitySwitchRules';
 
 // default values
-let ruleName = 'RandomBitrateRule';
-let rule = RandomBitrateRule;
+let ruleName = '';
+let rule;
 let simulationDesc = "default-desc";
 
 let array = []; //TODO: Figure out how to do static array 
 let player = dashjs.MediaPlayer().create();
 
+window.onload = () => {
+    document.querySelector("#selectRule").value = "default";
+}
 document.querySelector("#selectRule").addEventListener("change", (e) => {
     let selected = e.target.value;
     if (selected === "RandomBitrateRule") {
@@ -129,6 +132,11 @@ document.querySelector("#text-sim-desc").addEventListener("input", (e) => {
 });
 
 document.querySelector("button").addEventListener("click", () => {
+    if (ruleName === "") {
+        console.log("rule not selected");
+        return;
+    }
+
     player.updateSettings(settingsGeneral);
     player.updateSettings(settingsABR);
     player.updateSettings(settingsBuffer);
