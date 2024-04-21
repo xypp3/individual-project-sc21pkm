@@ -95,8 +95,13 @@ function saveTextAsFile(text, filename) {
 
 
 const url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd";
+/* Disable Caching:
+ *  - lastMedia and lastBitrate disable saving the data from previous stream and loading the new stream with those settings
+ *  - cacheLoadThreshold disables loading from browser cache
+*/
+const settingsGeneral = { streaming: { lastMediaSettingsCachingInfo: { enabled: false }, lastBitrateCachingInfo: { enabled: false }, cacheLoadThresholds: { video: 0, audio: 0 }, cacheInitSegments: false } };
 const settingsABR = { streaming: { abr: { useDefaultABRRules: false }, } };
-const settingsBuffer = { streaming: { buffer: { initialBufferLevel: NaN, stableBufferTime: 20, longFormContentDurationThreshhold: 600, bufferTimeAtTopQualityLongForm: 90 } } };
+const settingsBuffer = { streaming: { buffer: { initialBufferLevel: NaN, stableBufferTime: 20, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 90 } } };
 const ruleType = 'qualitySwitchRules';
 
 let ruleName = 'RandomBitrateRule';
@@ -108,10 +113,9 @@ let simulationDesc = "bandwidth-or-something";
 let array = []; //TODO: Figure out how to do static array 
 let player = dashjs.MediaPlayer().create();
 
+player.updateSettings(settingsGeneral);
 player.updateSettings(settingsABR);
 player.updateSettings(settingsBuffer);
 player.addABRCustomRule(ruleType, ruleName, rule);
 player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true));
 player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}.csv`); });
-
-player.initialize(document.querySelector('video'), url, false);
