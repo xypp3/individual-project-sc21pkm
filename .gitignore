@@ -1,4 +1,5 @@
 node_modules
+venv
 
 # reference libraries
 dash.all.debug.js
