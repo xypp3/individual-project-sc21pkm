@@ -1,5 +1,7 @@
 import dashjs from "dashjs";
 import RandomBitrateRule from "./RandomBitrateRule.js";
+import BBARule from "./BBARule.js";
+import HoBRule from "./HoBRule.js";
 
 function getMetrics(player, array, logging) {
     return function(event) {
@@ -122,16 +124,25 @@ window.onload = () => {
     document.querySelector("#selectRule").value = "default";
     document.querySelector("#hasEnded").innerHTML = false;
 }
+
 document.querySelector("#selectRule").addEventListener("change", (e) => {
     let selected = e.target.value;
+
     if (selected === "RandomBitrateRule") {
         console.log("selected RandomBitrateRule");
         ruleName = selected;
         rule = RandomBitrateRule;
+    } else if (selected === "BBARule") {
+        console.log("selected BBARule");
+        ruleName = selected;
+        rule = BBARule;
+    } else if (selected === "HoBRule") {
+        console.log("selected HoBRule");
+        ruleName = selected;
+        rule = HoBRule;
     } else {
         console.log("Rule not selected");
     }
-
 });
 
 document.querySelector("#text-sim-desc").addEventListener("input", (e) => {
