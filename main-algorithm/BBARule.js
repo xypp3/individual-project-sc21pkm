@@ -33,17 +33,26 @@
 // Rule that selects the lowest possible bitrate
 function BBARule(config) {
 
-    // console.log("Config::");
-    // console.log(config);
-    let factory = dashjs.FactoryMaker;
-    let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
-    let MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
-    let StreamController = factory.getSingletonFactoryByName('StreamController');
-
+    // for some reason config is always empty (haven't dug into lib to find out why)
+    config = config || {};
     let context = this.context;
+
+    const factory = dashjs.FactoryMaker;
+    const SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
+    const MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
+    const StreamController = factory.getSingletonFactoryByName('StreamController');
+
+    const EventBus = factory.getSingletonFactoryByName('EventBus');
+    const eventBus = EventBus(context).getInstance();
+
+    const DashMetrics = factory.getSingletonFactoryByName('DashMetrics');
+    const dashMetrics = DashMetrics(context).getInstance();
+
+    console.log(dashMetrics);
+
+    console.log(MetricsModel);
+    console.log(StreamController);
     let instance;
-    // console.log("Class context:");
-    // console.log(context);
 
     function setup() {
     }
