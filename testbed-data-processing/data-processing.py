@@ -24,15 +24,21 @@ for f in glob.glob(dir_raw_data + "*", recursive=False):
     m = re.search(r"dashjs_data_(.+)_(.+)_.*\.csv", f)
 
     if m is None:
-        print(f"File: {f} could not match")
+        # print(f"File: {f} could not match")
         continue
 
     rule = m.group(1)
     desc = m.group(2)
+    print(rule, desc)
     try:
         data_grouped[desc][rule].append(f)
-    except:
-        data_grouped[desc] = {rule: [f]}
+    except KeyError:
+        try:
+            data_grouped[desc][rule] = [f]
+        except KeyError:
+            data_grouped[desc] = {rule: [f]}
+
+        print("not found", rule, desc, data_grouped)
 
         # check if name already exists
         found = False
@@ -44,21 +50,58 @@ for f in glob.glob(dir_raw_data + "*", recursive=False):
         if not found:
             data_grouped_names.append((desc, [rule]))
 
+
 """
 - group files into averages
 - for averages sort into different graphs
-- buffer health graph
+
+1 graph buffer health
     - compare diff bandwidths
     - compare diff rules
-- sliding window size different graph
-- 
+2 graph bitrate
+    - compare diff bandwidths
+    - compare diff rules
+3 graph rebuffering
+    - number of times rebuffering
+    - average (and std) time spent on 0 buffer when rebuffering
+    - NOTE: legend gives data on what rule and what bandwidth
+    - NOTE: Potential for peer evaluation
+4 graph sliding window size different
+    - compare diff bandwidths
+    - show bitrates
+
+
+What do I want
+- 600 rows to 600 rows
+    - how do I represent the data?
+
+Additional Data I want
+- Add timer column (stopwatch from play to end of video)
+- Remove fps data
 
 """
 df_grouped_all = {}
 print("New")
 print(data_grouped_names)
+print(data_grouped)
+
 for desc, ruleList in data_grouped_names:
-    print(desc, ruleList)
+    df_grouped_all[desc] = {}
+    for rule in ruleList:
+        dfs = []
+        for file in data_grouped[desc][rule]:
+            dfs.append(pd.read_csv(file))
+
+        # TODO: check if manual index is A. correct B. necessary
+        # TODO: I don't think i want to concat, I think i wanna somehow avg/merge the data
+        single_df = pd.concat(dfs, ignore_index=True)
+
+        df_grouped_all[desc][rule] = single_df
+
+for desc, ruleList in data_grouped_names:
+    print(desc)
+    for rule in ruleList:
+        print(rule, df_grouped_all[desc][rule])
 
 #
 # # Read the CSV file into a DataFrame
