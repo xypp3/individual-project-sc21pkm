@@ -120,6 +120,7 @@ let player = dashjs.MediaPlayer().create();
 
 window.onload = () => {
     document.querySelector("#selectRule").value = "default";
+    document.querySelector("#hasEnded").innerHTML = false;
 }
 document.querySelector("#selectRule").addEventListener("change", (e) => {
     let selected = e.target.value;
@@ -150,7 +151,10 @@ document.querySelector("button").addEventListener("click", () => {
     player.addABRCustomRule(ruleType, ruleName, rule);
 
     player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true));
-    player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => { saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}_.csv`); });
+    player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => {
+        saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}_.csv`);
+        document.querySelector("#hasEnded").innerHTML = true;
+    });
 
 
     player.initialize(document.querySelector("video"), url, true);
