@@ -109,7 +109,7 @@ const url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd";
 */
 const settingsGeneral = { streaming: { lastMediaSettingsCachingInfo: { enabled: false }, lastBitrateCachingInfo: { enabled: false }, cacheLoadThresholds: { video: 0, audio: 0 }, cacheInitSegments: false } };
 const settingsABR = { streaming: { abr: { useDefaultABRRules: false }, } };
-const settingsBuffer = { streaming: { buffer: { initialBufferLevel: NaN, stableBufferTime: 20, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 90 } } };
+let settingsBuffer = { streaming: { buffer: { initialBufferLevel: NaN, stableBufferTime: 20, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 90 } } };
 const ruleType = 'qualitySwitchRules';
 
 // default values
@@ -136,6 +136,7 @@ document.querySelector("#selectRule").addEventListener("change", (e) => {
         console.log("selected BBARule");
         ruleName = selected;
         rule = BBARule;
+        settingsBuffer = { streaming: { buffer: { stableBufferTime: 90, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 216 } } };
     } else if (selected === "HoBRule") {
         console.log("selected HoBRule");
         ruleName = selected;
@@ -161,7 +162,8 @@ document.querySelector("button").addEventListener("click", () => {
 
     player.addABRCustomRule(ruleType, ruleName, rule);
 
-    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true));
+
+    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, false));
     player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => {
         saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}_.csv`);
         document.querySelector("#hasEnded").innerHTML = true;
