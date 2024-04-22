@@ -28,9 +28,8 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
+let bitrateIndexPrev = 0;
 
-
-// Rule that selects the lowest possible bitrate
 function BBARule(config) {
 
     // for some reason config is always empty (haven't dug into lib to find out why)
@@ -39,19 +38,10 @@ function BBARule(config) {
 
     const factory = dashjs.FactoryMaker;
     const SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
-    const MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
-    const StreamController = factory.getSingletonFactoryByName('StreamController');
-
-    const EventBus = factory.getSingletonFactoryByName('EventBus');
-    const eventBus = EventBus(context).getInstance();
 
     const DashMetrics = factory.getSingletonFactoryByName('DashMetrics');
     const dashMetrics = DashMetrics(context).getInstance();
 
-    console.log(dashMetrics);
-
-    console.log(MetricsModel);
-    console.log(StreamController);
     let instance;
 
     function setup() {
@@ -62,42 +52,57 @@ function BBARule(config) {
     function getMaxIndex(rulesContext) {
         return getSwitchRequest(rulesContext);
     }
-    // Always use lowest bitrate
+
+    function bufferToIndex(buffer) {
+        let cushion = 108 - 45;
+        let buffInCushion = buffer - 45;
+
+        return Math.floor((buffInCushion / cushion) * 10);
+    }
+
     function getSwitchRequest(rulesContext) {
-        // console.log("Rules Context:");
-        // console.log(rulesContext);
-        // here you can get some informations aboit metrics for example, to implement the rule
-        // let metricsModel = MetricsModel(context).getInstance();
-        // var mediaType = rulesContext.getMediaInfo().type;
-        // var metrics = metricsModel.getMetricsFor(mediaType, true);
+        let bitratePlus = 0;
+        if (bitrateIndexPrev === 9) {
+            bitratePlus = 9;
+        } else {
+            bitratePlus = bitrateIndexPrev + 1;
+        }
+        let bitrateMinus = 0;
+        if (bitrateIndexPrev === 0) {
+            bitrateMinus = 0;
+        } else {
+            bitrateMinus = bitrateIndexPrev - 1;
+        }
 
-        // A smarter (real) rule could need analyze playback metrics to take
-        // bitrate switching decision. Printing metrics here as a reference
-        // console.log(metrics);
-        //
-        // console.log("plspls");
-        // console.log("plspls HELL YEAH!!!");
-        // console.log("plspls");
-        // Get current bitrate
-        // let streamController = StreamController(context).getInstance();
-        // let abrController = rulesContext.getAbrController();
-        // let current = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
-        //
-        // If already in lowest bitrate, don't do anything
-        // if (current === 0) {
-        //     return SwitchRequest(context).create();
-        // }
+        const buffer = dashMetrics.getCurrentBufferLevel(rulesContext.getMediaType());
+        const indexFromBuffer = bufferToIndex(buffer);
+        console.log("Level: " + buffer);
+        console.log("Index from Buffer: " + indexFromBuffer);
 
-        // Ask to switch to the lowest bitrate
+        // halving BBA study buffer as 124seconds gives Buffer exceeded warning and crashes at around 140seconds of buffer
+        let bitrateIndexNext = bitrateIndexPrev;
+        if (buffer <= 45) {
+            bitrateIndexNext = 0;
+        } else if (buffer >= 108) {
+            bitrateIndexNext = 9;
+        } else if (indexFromBuffer >= bitratePlus) {
+            bitrateIndexNext = indexFromBuffer;
+        } else if (indexFromBuffer <= bitrateMinus) {
+            bitrateIndexNext = indexFromBuffer;
+        }
+
+        console.log(bitrateIndexNext);
+
+        // final request
         let switchRequest = SwitchRequest(context).create();
-        switchRequest.quality = 1;
+        switchRequest.quality = bitrateIndexNext;
         switchRequest.reason = 'Switch according to Netflix BBA';
         switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
         return switchRequest;
     }
 
     function reset() {
-        // TODO: Investigate: reset data probably BUT I don't know how often it resets
+        bitrateIndexPrev = 0;
     }
 
     instance = {
