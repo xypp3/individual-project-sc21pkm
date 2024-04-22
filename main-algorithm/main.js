@@ -136,7 +136,8 @@ document.querySelector("#selectRule").addEventListener("change", (e) => {
         console.log("selected BBARule");
         ruleName = selected;
         rule = BBARule;
-        settingsBuffer = { streaming: { buffer: { stableBufferTime: 90, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 216 } } };
+        // halving BBA study buffer as 124seconds gives Buffer exceeded warning and crashes at around 140seconds of buffer
+        settingsBuffer = { streaming: { buffer: { stableBufferTime: 120, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 108 } } };
     } else if (selected === "HoBRule") {
         console.log("selected HoBRule");
         ruleName = selected;
