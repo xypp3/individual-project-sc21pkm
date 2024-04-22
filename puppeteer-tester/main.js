@@ -1,35 +1,44 @@
 import puppeteer from 'puppeteer';
 
+const bitrateConv = new Map();
 
 (async () => {
-	// Launch the browser and open a new blank page
+	let url = 'http://127.0.0.1:5173';
 	const browser = await puppeteer.launch({ headless: false });
 	const page = await browser.newPage();
-
-	// Navigate the page to a URL
-	await page.goto('http://127.0.0.1:5173');
-
-	// Set screen size
+	await page.goto(url);
 	await page.setViewport({ width: 1080, height: 1024 });
 
-	await page.screenshot({ path: 'screenshot.png' });
+	// setup
+	let rule = "RandomBitrateRule";
+	await page.type("#selectRule", rule);
+	let desc = "Bandwidth:10kbi/s";
+	await page.type("#text-sim-desc", desc);
+	await page.click("button");
 
-	// // Type into search box
-	// await page.type('.devsite-search-field', 'automate beyond recorder');
-	//
-	// // Wait and click on first result
-	// const searchResultSelector = '.devsite-result-item-link';
-	// await page.waitForSelector(searchResultSelector);
-	// await page.click(searchResultSelector);
-	//
-	// // Locate the full title with a unique string
-	// const textSelector = await page.waitForSelector(
-	// 	'text/Customize and automate'
-	// );
-	// const fullTitle = await textSelector?.evaluate(el => el.textContent);
-	//
-	// // Print the full title
-	// console.log('The title of this blog post is "".', fullTitle);
+	// intercept requests and apply bandwidth
+	// TODO: 1. Find bandwidth calculation
+	// 2. Make value programmable
+	// 3. Make it variable (ala zipf function)
+	let interceptBandwidth = 700;
+	await page.setRequestInterception(true);
+	page.on('request', interceptedRequest => {
+		if (interceptedRequest.isInterceptResolutionHandled()) return;
+		const reqUrl = interceptedRequest.url();
+		if (reqUrl.endsWith(".m4v")) {
+			// map req url to birate
+			console.log(reqUrl);
+			console.log(reqUrl.match("_([0-9]*)k_")[1])
+			const bitrate = bitrateConv.get(reqUrl.match("_([0-9]*)k_")[1]);
+			console.log(bitrate);
+			const timeDelay = bitrate / interceptBandwidth;
+			setTimeout(async () => { await interceptedRequest.continue() }, timeDelay);
+		} else {
+			interceptedRequest.continue();
+		}
+	});
 
-	await browser.close();
+	// TODO: make this propah
+	setTimeout(async () => { await browser.close() }, 10000);
+
 })();
