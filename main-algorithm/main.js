@@ -109,7 +109,9 @@ const url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd";
 */
 const settingsGeneral = { streaming: { lastMediaSettingsCachingInfo: { enabled: false }, lastBitrateCachingInfo: { enabled: false }, cacheLoadThresholds: { video: 0, audio: 0 }, cacheInitSegments: false } };
 const settingsABR = { streaming: { abr: { useDefaultABRRules: false }, } };
-let settingsBuffer = { streaming: { buffer: { initialBufferLevel: NaN, stableBufferTime: 20, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 90 } } };
+// NOTE: use half of Netflix buffer as default
+//      halving BBA study buffer as 124seconds gives Buffer exceeded warning and crashes at around 140seconds of buffer
+let settingsBuffer = { streaming: { buffer: { stableBufferTime: 120, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 108 } } };
 const ruleType = 'qualitySwitchRules';
 
 // default values
@@ -117,13 +119,13 @@ let ruleName = '';
 let rule;
 let simulationDesc = "default-desc";
 
-let array = []; //TODO: Figure out how to do static array 
+// NOTE: To improve performance, make static allocation at begining
+let array = [];
 let player = dashjs.MediaPlayer().create();
 
-window.onload = () => {
-    document.querySelector("#selectRule").value = "default";
-    document.querySelector("#hasEnded").innerHTML = false;
-}
+document.querySelector("#selectRule").value = "default";
+document.querySelector("#hasEnded").innerHTML = false;
+document.querySelector("#text-sim-desc").value = simulationDesc;
 
 document.querySelector("#selectRule").addEventListener("change", (e) => {
     let selected = e.target.value;
@@ -136,8 +138,6 @@ document.querySelector("#selectRule").addEventListener("change", (e) => {
         console.log("selected BBARule");
         ruleName = selected;
         rule = BBARule;
-        // halving BBA study buffer as 124seconds gives Buffer exceeded warning and crashes at around 140seconds of buffer
-        settingsBuffer = { streaming: { buffer: { stableBufferTime: 120, longFormContentDurationThreshold: 600, bufferTimeAtTopQualityLongForm: 108 } } };
     } else if (selected === "HoBRule") {
         console.log("selected HoBRule");
         ruleName = selected;
