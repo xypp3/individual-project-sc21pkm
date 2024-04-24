@@ -30,20 +30,27 @@
  */
 
 
-// Rule that selects the lowest possible bitrate
-function HobRule(config) {
+function HoBRule(config) {
 
-    // console.log("Config::");
-    // console.log(config);
-    let factory = dashjs.FactoryMaker;
-    let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
-    let MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
-    let StreamController = factory.getSingletonFactoryByName('StreamController');
-
+    // for some reason config is always empty (haven't dug into lib to find out why)
+    config = config || {};
     let context = this.context;
+
+    const factory = dashjs.FactoryMaker;
+    const SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
+    const MetricsModel = factory.getSingletonFactoryByName('MetricsModel');
+    const StreamController = factory.getSingletonFactoryByName('StreamController');
+
+    const EventBus = factory.getSingletonFactoryByName('EventBus');
+    const eventBus = EventBus(context).getInstance();
+
+    const DashMetrics = factory.getSingletonFactoryByName('DashMetrics');
+    const dashMetrics = DashMetrics(context).getInstance();
+
+    console.log(dashMetrics);
     let instance;
-    // console.log("Class context:");
-    // console.log(context);
+
+    let bitrateQueuePrev = [];
 
     function setup() {
     }
@@ -53,42 +60,30 @@ function HobRule(config) {
     function getMaxIndex(rulesContext) {
         return getSwitchRequest(rulesContext);
     }
-    // Always use lowest bitrate
+
     function getSwitchRequest(rulesContext) {
-        // console.log("Rules Context:");
-        // console.log(rulesContext);
-        // here you can get some informations aboit metrics for example, to implement the rule
-        // let metricsModel = MetricsModel(context).getInstance();
-        // var mediaType = rulesContext.getMediaInfo().type;
-        // var metrics = metricsModel.getMetricsFor(mediaType, true);
+        try {
+            const buffer = dashMetrics.getCurrentBufferLevel(rulesContext.getMediaType());
+            let bitrateIndexNext = 0;
 
-        // A smarter (real) rule could need analyze playback metrics to take
-        // bitrate switching decision. Printing metrics here as a reference
-        // console.log(metrics);
-        //
-        // console.log("plspls");
-        // console.log("plspls HELL YEAH!!!");
-        // console.log("plspls");
-        // Get current bitrate
-        // let streamController = StreamController(context).getInstance();
-        // let abrController = rulesContext.getAbrController();
-        // let current = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
-        //
-        // If already in lowest bitrate, don't do anything
-        // if (current === 0) {
-        //     return SwitchRequest(context).create();
-        // }
+            bitrateQueuePrev.push(buffer);
+            if (bitrateQueuePrev.length > 24) {
+                bitrateQueuePrev.shift();
+            }
 
-        // Ask to switch to the lowest bitrate
-        let switchRequest = SwitchRequest(context).create();
-        switchRequest.quality = 7;
-        switchRequest.reason = 'Switch according to health of buffer (HoB)';
-        switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
-        return switchRequest;
+            // final request
+            let switchRequest = SwitchRequest(context).create();
+            switchRequest.quality = bitrateIndexNext;
+            switchRequest.reason = 'Switch according to HoB, health of buffer';
+            switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
+            return switchRequest;
+        } catch {
+            console.log("HoB Rule Switch request is throwing an error");
+        }
     }
 
     function reset() {
-        // TODO: Investigate: reset data probably BUT I don't know how often it resets
+        bitrateQueuePrev = [];
     }
 
     instance = {
@@ -104,6 +99,6 @@ function HobRule(config) {
     return instance;
 }
 
-HobRule.__dashjs_factory_name = 'HobRule';
-export default dashjs.FactoryMaker.getClassFactory(HobRule);
+HoBRule.__dashjs_factory_name = 'HoBRule';
+export default dashjs.FactoryMaker.getClassFactory(HoBRule);
 
