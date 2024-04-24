@@ -11,32 +11,38 @@ bitrateConv.set('', '');
 	await page.setViewport({ width: 1080, height: 1024 });
 
 	// setup
-	let rule = "RandomBitrateRule";
+	let rule = "BBARule";
 	await page.type("#selectRule", rule);
-	let desc = "Bandwidth:10kbi/s";
+	let desc = "9Mbi-per-sec";
 	await page.type("#text-sim-desc", desc);
 	await page.click("button");
 
 	// intercept requests and apply bandwidth
-	// TODO: 1x. Find bandwidth calculation
+	// TODO:
+	// 1. Find bandwidth calculation
 	// 2. Make value programmable
 	// 3. Make it variable (dash test suite in bola study) (ala zipf function)
-	let interceptBandwidth = 9000; // usually in Mbi but bitrate in Kbi
-	await page.setRequestInterception(true);
-	page.on('request', interceptedRequest => {
-		if (interceptedRequest.isInterceptResolutionHandled()) return;
-		const reqUrl = interceptedRequest.url();
-		if (reqUrl.endsWith(".m4v")) {
-			// map req url to birate
-			const bitrate = reqUrl.match("_([0-9]*)k_")[1];
-			const timeDelay = bitrate / interceptBandwidth;
-			setTimeout(async () => { await interceptedRequest.continue() }, timeDelay);
-		} else {
-			interceptedRequest.continue();
-		}
-	});
+	// let interceptBandwidth = 9000; // usually in Mbi but bitrate in Kbi
+	// await page.setRequestInterception(true);
+	// page.on('request', interceptedRequest => {
+	// 	if (interceptedRequest.isInterceptResolutionHandled()) return;
+	// 	const reqUrl = interceptedRequest.url();
+	// 	if (reqUrl.endsWith(".m4v")) {
+	// 		// map req url to birate
+	// 		const bitrate = reqUrl.match("_([0-9]*)k_")[1];
+	// 		// const timeDelay = bitrate / interceptBandwidth;
+	// 		const timeDelay = 500;
+	// 		setTimeout(async () => { await interceptedRequest.continue() }, timeDelay);
+	// 	} else {
+	// 		interceptedRequest.continue();
+	// 	}
+	// });
 
-	await page.waitForFunction(() => { return document.querySelector("#hasEnded").innerHTML !== "false" });
+	await page.waitForFunction(() => {
+		const span = document.querySelector("#hasEnded");
+		return span && span.trim() === "true";
+	}, { timeout: 900000 });
+
 	await browser.close();
 
 })();
