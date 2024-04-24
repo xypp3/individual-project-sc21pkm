@@ -28,7 +28,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-let bitrateIndexPrev = 0;
 
 function BBARule(config) {
 
@@ -43,6 +42,10 @@ function BBARule(config) {
     const dashMetrics = DashMetrics(context).getInstance();
 
     let instance;
+    let bitrateIndexPrev = 0;
+
+    const minIndex = 0;
+    const maxIndex = 9;
 
     function setup() {
     }
@@ -52,53 +55,63 @@ function BBARule(config) {
     function getMaxIndex(rulesContext) {
         return getSwitchRequest(rulesContext);
     }
+    function shouldAbandon(rulesContext, streamId) {
+        console.log("Abandoning all hope");
+    }
 
     function bufferToIndex(buffer) {
         let cushion = 108 - 45;
         let buffInCushion = buffer - 45;
 
-        return Math.floor((buffInCushion / cushion) * 10);
+        return Math.floor((buffInCushion / cushion) * (maxIndex + 1));
     }
 
     function getSwitchRequest(rulesContext) {
-        let bitratePlus = 0;
-        if (bitrateIndexPrev === 9) {
-            bitratePlus = 9;
-        } else {
-            bitratePlus = bitrateIndexPrev + 1;
+        try {
+            const abrController = rulesContext.getAbrController();
+            // console.log(abrController.getPossibleVoRepresentations(rulesContext.getMediaType()));
+
+            let bitratePlus = bitrateIndexPrev;
+            if (bitrateIndexPrev === maxIndex) {
+                bitratePlus = maxIndex;
+            } else {
+                bitratePlus = bitrateIndexPrev + 1;
+            }
+            let bitrateMinus = bitrateIndexPrev;
+            if (bitrateIndexPrev === minIndex) {
+                bitrateMinus = minIndex;
+            } else {
+                bitrateMinus = bitrateIndexPrev - 1;
+            }
+
+            const buffer = dashMetrics.getCurrentBufferLevel(rulesContext.getMediaType());
+            const indexFromBuffer = bufferToIndex(buffer);
+            console.log("Level: " + buffer);
+            console.log("Index from Buffer: " + indexFromBuffer);
+
+            // halving BBA study buffer as 124seconds gives Buffer exceeded warning and crashes at around 140seconds of buffer
+            let bitrateIndexNext = bitrateIndexPrev;
+            if (buffer <= 45) {
+                bitrateIndexNext = minIndex;
+            } else if (buffer >= 108) {
+                bitrateIndexNext = maxIndex;
+            } else if (indexFromBuffer >= bitratePlus) {
+                bitrateIndexNext = indexFromBuffer;
+            } else if (indexFromBuffer <= bitrateMinus) {
+                bitrateIndexNext = indexFromBuffer;
+            }
+
+            console.log(bitrateIndexNext);
+
+            // final request
+            let switchRequest = SwitchRequest(context).create();
+            switchRequest.quality = bitrateIndexNext;
+            switchRequest.reason = 'Switch according to Netflix BBA';
+            switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
+            return switchRequest;
+        } catch {
+            console.log("Switch request threw an error");
         }
-        let bitrateMinus = 0;
-        if (bitrateIndexPrev === 0) {
-            bitrateMinus = 0;
-        } else {
-            bitrateMinus = bitrateIndexPrev - 1;
-        }
-
-        const buffer = dashMetrics.getCurrentBufferLevel(rulesContext.getMediaType());
-        const indexFromBuffer = bufferToIndex(buffer);
-        console.log("Level: " + buffer);
-        console.log("Index from Buffer: " + indexFromBuffer);
-
-        // halving BBA study buffer as 124seconds gives Buffer exceeded warning and crashes at around 140seconds of buffer
-        let bitrateIndexNext = bitrateIndexPrev;
-        if (buffer <= 45) {
-            bitrateIndexNext = 0;
-        } else if (buffer >= 108) {
-            bitrateIndexNext = 9;
-        } else if (indexFromBuffer >= bitratePlus) {
-            bitrateIndexNext = indexFromBuffer;
-        } else if (indexFromBuffer <= bitrateMinus) {
-            bitrateIndexNext = indexFromBuffer;
-        }
-
-        console.log(bitrateIndexNext);
-
-        // final request
-        let switchRequest = SwitchRequest(context).create();
-        switchRequest.quality = bitrateIndexNext;
-        switchRequest.reason = 'Switch according to Netflix BBA';
-        switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
-        return switchRequest;
     }
 
     function reset() {
@@ -110,6 +123,7 @@ function BBARule(config) {
         // DO NOT DELETE SEEMINGLY USELESS getMaxIndex()
         //  When dashjs library is built getSwitchRequest() gets replaced with getMaxIndex(). Why??? God knows, but I'll ask them on GitHub and see if there a method in this madness
         getMaxIndex,
+        shouldAbandon,
         reset
     };
 
