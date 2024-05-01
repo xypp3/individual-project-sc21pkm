@@ -50,9 +50,16 @@ function HoBRule(config) {
     console.log(dashMetrics);
     let instance;
 
-    let bitrateQueuePrev = [];
+    let prevBitrateIndex;
+    let prevBuffer;
+    const prevLength = 20;
 
     function setup() {
+        eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_ABANDONED"], onFragmentLoadingAbandoned, instance);
+        eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], onFragmentLoadingCompleted, instance);
+
+        prevBitrateIndex = [];
+        prevBuffer = [];
     }
 
     // DO NOT DELETE SEEMINGLY USELESS getMaxIndex()
@@ -61,15 +68,50 @@ function HoBRule(config) {
         return getSwitchRequest(rulesContext);
     }
 
+    function onFragmentLoadingAbandoned() {
+        console.log("fragment abandoned");
+    }
+
+    function onFragmentLoadingCompleted(e) {
+        if (e && e.request && e.mediaType === 'video') {
+            // dequeue 
+            if (prevBuffer.length === prevLength && prevBitrateIndex.length === prevLength) {
+                prevBitrateIndex.shift();
+                prevBuffer.shift();
+            } else {
+                console.log(prevBitrateIndex.length, prevBuffer.length, prevLength);
+            }
+
+            const bufferLevel = dashMetrics.getCurrentBufferLevel(e.mediaType);
+            console.log(bufferLevel);
+
+            // enqueue
+            prevBitrateIndex.push(e.request.quality);
+            prevBuffer.push(bufferLevel);
+
+            console.log("completed fragment on load");
+            console.log(prevBitrateIndex);
+            console.log(prevBuffer);
+        } else if (e.mediaType === "audio") {
+        } else {
+            console.log("error getting env on fragment loaded");
+            console.log(e);
+        }
+    }
+
+    function calcHarmonicMean(n, arr) {
+        let value = 0;
+        for (let i = 0; i < arr.length; i++) {
+            value += (1 / arr[i]);
+        }
+        return n / value;
+    }
+
     function getSwitchRequest(rulesContext) {
         try {
-            const buffer = dashMetrics.getCurrentBufferLevel(rulesContext.getMediaType());
-            let bitrateIndexNext = 0;
+            // const buffer = dashMetrics.getCurrentBufferLevel(rulesContext.getMediaType());
+            let bitrateIndexNext = Math.floor(Math.random() * 10);
 
-            bitrateQueuePrev.push(buffer);
-            if (bitrateQueuePrev.length > 24) {
-                bitrateQueuePrev.shift();
-            }
 
             // final request
             let switchRequest = SwitchRequest(context).create();
@@ -83,7 +125,8 @@ function HoBRule(config) {
     }
 
     function reset() {
-        bitrateQueuePrev = [];
+        prevBitrateIndex = [];
+        prevBuffer = [];
     }
 
     instance = {
