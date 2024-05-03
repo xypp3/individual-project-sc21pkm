@@ -54,6 +54,10 @@ function HoBRule(config) {
     let prevBuffer;
     const prevLength = 20;
 
+    const factorP = 1;
+    const factorI = 1;
+    const factorD = 1;
+
     function setup() {
         eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_ABANDONED"], onFragmentLoadingAbandoned, instance);
         eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], onFragmentLoadingCompleted, instance);
@@ -105,6 +109,24 @@ function HoBRule(config) {
             value += (1 / arr[i]);
         }
         return n / value;
+    }
+
+    function sigmoid(x) {
+        return Math.exp(x) / (Math.exp(x) + 1);
+    }
+
+    function propportional(currBitrateIndex, currBuffer) {
+        let prev = 1;
+
+        let diff = currBuffer - prev;
+
+    }
+
+    function integral() {
+        return [
+            calcHarmonicMean(prevBitrateIndex.length, prevBitrateIndex),
+            calcHarmonicMean(prevBuffer.length, prevBuffer)
+        ];
     }
 
     function getSwitchRequest(rulesContext) {
