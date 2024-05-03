@@ -124,7 +124,7 @@ let array = [];
 let player = dashjs.MediaPlayer().create();
 
 document.querySelector("#selectRule").value = "default";
-document.querySelector("#hasEnded").innerHTML = false;
+document.querySelector("#hasEnded").textContent = false;
 document.querySelector("#text-sim-desc").value = simulationDesc;
 
 document.querySelector("#selectRule").addEventListener("change", (e) => {
@@ -167,7 +167,7 @@ document.querySelector("button").addEventListener("click", () => {
     player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, false));
     player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => {
         saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}_.csv`);
-        document.querySelector("#hasEnded").innerHTML = true;
+        document.querySelector("#hasEnded").textContent = true;
     });
 
 
