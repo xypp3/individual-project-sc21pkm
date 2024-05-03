@@ -51,19 +51,21 @@ function HoBRule(config) {
     let instance;
 
     let prevBitrateIndex;
-    let prevBuffer;
+    let prevBufferError;
     const prevLength = 20;
 
     const factorP = 1;
     const factorI = 1;
     const factorD = 1;
+    // TODO: Determine better number
+    const targetBuffer = 40;
 
     function setup() {
         eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_ABANDONED"], onFragmentLoadingAbandoned, instance);
         eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], onFragmentLoadingCompleted, instance);
 
         prevBitrateIndex = [];
-        prevBuffer = [];
+        prevBufferError = [];
     }
 
     // DO NOT DELETE SEEMINGLY USELESS getMaxIndex()
@@ -79,11 +81,11 @@ function HoBRule(config) {
     function onFragmentLoadingCompleted(e) {
         if (e && e.request && e.mediaType === 'video') {
             // dequeue 
-            if (prevBuffer.length === prevLength && prevBitrateIndex.length === prevLength) {
+            if (prevBufferError.length === prevLength && prevBitrateIndex.length === prevLength) {
                 prevBitrateIndex.shift();
-                prevBuffer.shift();
+                prevBufferError.shift();
             } else {
-                console.log(prevBitrateIndex.length, prevBuffer.length, prevLength);
+                console.log(prevBitrateIndex.length, prevBufferError.length, prevLength);
             }
 
             const bufferLevel = dashMetrics.getCurrentBufferLevel(e.mediaType);
@@ -91,11 +93,11 @@ function HoBRule(config) {
 
             // enqueue
             prevBitrateIndex.push(e.request.quality);
-            prevBuffer.push(bufferLevel);
+            prevBufferError.push(bufferLevel - targetBuffer);
 
             console.log("completed fragment on load");
             console.log(prevBitrateIndex);
-            console.log(prevBuffer);
+            console.log(prevBufferError);
         } else if (e.mediaType === "audio") {
         } else {
             console.log("error getting env on fragment loaded");
@@ -115,17 +117,16 @@ function HoBRule(config) {
         return Math.exp(x) / (Math.exp(x) + 1);
     }
 
-    function propportional(currBitrateIndex, currBuffer) {
-        let prev = 1;
+    function controllerP() {
+        const currBufferErrorInstance = prevBufferError[prevBufferError.length - 1];
 
-        let diff = currBuffer - prev;
-
+        return sigmoid(factorP * currBufferErrorInstance);
     }
 
-    function integral() {
+    function controllerI() {
         return [
-            calcHarmonicMean(prevBitrateIndex.length, prevBitrateIndex),
-            calcHarmonicMean(prevBuffer.length, prevBuffer)
+            factorI * calcHarmonicMean(prevBitrateIndex.length, prevBitrateIndex),
+            factorI * calcHarmonicMean(prevBufferError.length, prevBufferError)
         ];
     }
 
@@ -148,7 +149,7 @@ function HoBRule(config) {
 
     function reset() {
         prevBitrateIndex = [];
-        prevBuffer = [];
+        prevBufferError = [];
     }
 
     instance = {
