@@ -50,22 +50,35 @@ function HoBRule(config) {
     console.log(dashMetrics);
     let instance;
 
+    let prevBitrate;
     let prevBitrateIndex;
     let prevBufferError;
     const prevLength = 20;
 
     const factorP = 1;
     const factorI = 1;
-    const factorD = 1;
+    const factorD = 0.4; // closer 0 one means more safe
     // TODO: Determine better number
-    const targetBuffer = 40;
+    const targetBuffer = 60;
+    const redMinus = 20;
+    const yellowMinus = 30;
+    const green = 50;
+    const yellowPlus = 70;
+    const redPlus = 90;
+    const bufferMax = 100;
+
+    const startup = 111;
+    const steady = 222;
+    let state = startup;
 
     function setup() {
         eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_ABANDONED"], onFragmentLoadingAbandoned, instance);
         eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], onFragmentLoadingCompleted, instance);
 
+        prevBitrate = [];
         prevBitrateIndex = [];
         prevBufferError = [];
+        state = startup;
     }
 
     // DO NOT DELETE SEEMINGLY USELESS getMaxIndex()
@@ -81,21 +94,27 @@ function HoBRule(config) {
     function onFragmentLoadingCompleted(e) {
         if (e && e.request && e.mediaType === 'video') {
             // dequeue 
-            if (prevBufferError.length === prevLength && prevBitrateIndex.length === prevLength) {
+            if (prevBufferError.length === prevLength
+                && prevBitrateIndex.length === prevLength
+                && prevBitrate.length == prevLength
+            ) {
+                prevBitrate.shift();
                 prevBitrateIndex.shift();
                 prevBufferError.shift();
             } else {
-                console.log(prevBitrateIndex.length, prevBufferError.length, prevLength);
+                console.log(prevBitrate.length, prevBitrateIndex.length, prevBufferError.length, prevLength);
             }
 
             const bufferLevel = dashMetrics.getCurrentBufferLevel(e.mediaType);
             console.log(bufferLevel);
 
             // enqueue
+            prevBitrate.push(e.request.bytesTotal);
             prevBitrateIndex.push(e.request.quality);
             prevBufferError.push(bufferLevel - targetBuffer);
 
             console.log("completed fragment on load");
+            console.log(prevBitrate);
             console.log(prevBitrateIndex);
             console.log(prevBufferError);
         } else if (e.mediaType === "audio") {
@@ -125,20 +144,61 @@ function HoBRule(config) {
 
     function controllerI() {
         return [
+            factorI * calcHarmonicMean(prevBitrate.length, prevBitrate),
             factorI * calcHarmonicMean(prevBitrateIndex.length, prevBitrateIndex),
             factorI * calcHarmonicMean(prevBufferError.length, prevBufferError)
         ];
     }
 
+    // function startupQuality(currThroughputSafe, currThroughput) {
+    //     const bufferDrainRateSafe = (currThroughputSafe / prevBitrate[prevBitrate.length - 1]);
+    //     const bufferDrainRate = (currThroughput / prevBitrate[prevBitrate.length - 1]);
+    //     console.log("buffer fill ratio safe:" + bufferDrainRateSafe);
+    //     console.log("buffer fill ratio:" + bufferDrainRate);
+    //
+    //     if (factorD >= 0 || 1 < factorD) {
+    //         console.error("factorD must be greater than zero 0 AND less than or equal to 1, it is: " + factorD);
+    //     }
+    //
+    //     return ((1 - factorD) * bufferDrainRateSafe) + (factorD * bufferDrainRate);
+    // }
+
     function getSwitchRequest(rulesContext) {
         try {
-            // const buffer = dashMetrics.getCurrentBufferLevel(rulesContext.getMediaType());
-            let bitrateIndexNext = Math.floor(Math.random() * 10);
+            const mediaInfo = rulesContext.getMediaInfo();
+            const mediaType = rulesContext.getMediaType();
+            const streamInfo = rulesContext.getStreamInfo();
+            const isDynamic = streamInfo && streamInfo.manifestInfo ? streamInfo.manifestInfo.isDynamic : null;
+            const streamId = streamInfo ? streamInfo.id : null;
+            const abrController = rulesContext.getAbrController();
+            const throughputHistory = abrController.getThroughputHistory();
+            const throughputSafe = throughputHistory.getSafeAverageThroughput(mediaType, isDynamic);
 
+            const bufferLevel = prevBufferError[prevBufferError.length - 1] + targetBuffer;
+
+            if (bufferLevel > yellowMinus) {
+                state = steady;
+            } else if (bufferLevel <= 1) {
+                state = startup;
+            }
+
+            let determinedQuality = prevBitrateIndex[prevBitrateIndex.length - 1];
+            switch (state) {
+                case startup:
+                    determinedQuality = abrController.getQualityForBitrate(mediaInfo, throughputSafe, streamId);
+                    break;
+                case steady:
+                    console.log("steady");
+                    break;
+                default:
+                    console.error("in unknown buffer state");
+                    state = startup;
+                    break;
+            }
 
             // final request
             let switchRequest = SwitchRequest(context).create();
-            switchRequest.quality = bitrateIndexNext;
+            switchRequest.quality = determinedQuality;
             switchRequest.reason = 'Switch according to HoB, health of buffer';
             switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
             return switchRequest;
@@ -148,8 +208,10 @@ function HoBRule(config) {
     }
 
     function reset() {
+        prevBitrate = [];
         prevBitrateIndex = [];
         prevBufferError = [];
+        state = startup;
     }
 
     instance = {
