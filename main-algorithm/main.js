@@ -3,7 +3,30 @@ import RandomBitrateRule from "./RandomBitrateRule.js";
 import BBARule from "./BBARule.js";
 import HoBRule from "./HoBRule.js";
 
-function getMetrics(player, array, logging) {
+function calculateQoE(prevQoE, currBuffer, currBitrate) {
+    if (prevQoE.k < 2) {
+        prevQoE.k += 1;
+        return 0;
+    }
+    console.log(prevQoE.avgQuality, prevQoE.var, prevQoE.rebuffer);
+
+    let quality = (prevQoE.avgQuality + currBitrate);
+    let variation = (prevQoE.var + Math.abs(currBitrate - prevQoE.prevBitrate));
+    let rebuffers = (currBuffer < 0.5) ? 1 : 0;
+
+    console.log(quality, variation, rebuffers)
+
+    prevQoE.avgQuality = quality;
+    prevQoE.var = variation;
+    prevQoE.rebuffer += rebuffers;
+    prevQoE.prevBitrate = currBitrate;
+    prevQoE.k += 1;
+
+    // 3000 const gotten from MPC study: <https://dl.acm.org/doi/pdf/10.1145/2785956.2787486>
+    return (prevQoE.avgQuality / prevQoE.k) - (prevQoE.var / (prevQoE.k - 1)) - (3000 * prevQoE.rebuffer);
+}
+
+function getMetrics(player, array, logging, prevQoE) {
     return function(event) {
         try {
             // see monitor sample: <http://reference.dashif.org/dash.js/nightly/samples/advanced/monitoring.html>
@@ -14,30 +37,32 @@ function getMetrics(player, array, logging) {
 
             if (dashMetrics && streamInfo) {
                 const periodIdx = streamInfo.index;
-                var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
-                var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
-                var bitrate = repSwitch ? Math.round(dashAdapter.getBandwidthForRepresentation(repSwitch.to, periodIdx) / 1000) : NaN;
-                var adaptation = dashAdapter.getAdaptationForType(periodIdx, 'video', streamInfo);
-                var currentRep = adaptation.Representation.find(function(rep) {
+                let repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
+                let bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
+                let bitrate = repSwitch ? Math.round(dashAdapter.getBandwidthForRepresentation(repSwitch.to, periodIdx) / 1000) : NaN;
+                let adaptation = dashAdapter.getAdaptationForType(periodIdx, 'video', streamInfo);
+                let currentRep = adaptation.Representation.find(function(rep) {
                     return rep.id === repSwitch.to
-                })
-                var frameRate = currentRep.frameRate;
-                var resolution = currentRep.width + 'x' + currentRep.height;
+                });
+                let resolution = currentRep.width + 'x' + currentRep.height;
+
+                let qoe = calculateQoE(prevQoE, bufferLevel, bitrate);
 
                 if (logging) {
                     console.log("Buffer level: " + bufferLevel + " secs");
                     console.log(bitrate + " Kbps");
                     console.log(playbackTime + "secs");
-                    console.log(frameRate + " fps");
+                    console.log("QoE: " + qoe);
                     console.log(resolution);
                 }
+
                 array.push(array.length / 6);
                 array.push(bufferLevel);
                 // this is the bitrate for the fragment at (bufferLevel + playbackTime)
                 //      where a fragment is smaller than a chunk +-1sec where a chunk now is 4sec
                 array.push(bitrate);
                 array.push(playbackTime);
-                array.push(frameRate);
+                array.push(qoe);
                 array.push(`"${resolution}"`);
             }
         } catch {
@@ -54,7 +79,7 @@ function arrayToCsv(array) {
         return "data format is wrong, abort CSV conversion";
     }
 
-    let str = "Index, Buffer Level, Bitrate, Playback Timestamp, Frame Rate, Resolution\n";
+    let str = "Index, Buffer Level, Bitrate, Playback Timestamp, QoE, Resolution\n";
     if (str.match(new RegExp(",", "g")).length != arrayLen - 1) {
         return "data column titles don't match the number of data columns";
     }
@@ -163,8 +188,15 @@ document.querySelector("button").addEventListener("click", () => {
 
     player.addABRCustomRule(ruleType, ruleName, rule);
 
+    let prevQoE = {
+        "k": 0,
+        "avgQuality": 0,
+        "var": 0,
+        "rebuffer": 0,
+        "prevBitrate": 0
+    };
 
-    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, false));
+    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true, prevQoE));
     player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => {
         saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}_.csv`);
         document.querySelector("#hasEnded").textContent = true;
