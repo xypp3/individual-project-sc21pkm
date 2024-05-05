@@ -6,6 +6,8 @@ import HoBRule from "./HoBRule.js";
 function calculateQoE(prevQoE, currBuffer, currBitrate) {
     if (prevQoE.k < 2) {
         prevQoE.k += 1;
+        prevQoE.prevBitrate = currBuffer;
+
         return 0;
     }
     console.log(prevQoE.avgQuality, prevQoE.var, prevQoE.rebuffer);
