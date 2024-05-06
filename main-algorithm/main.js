@@ -198,7 +198,7 @@ document.querySelector("button").addEventListener("click", () => {
         "prevBitrate": 0
     };
 
-    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true, prevQoE));
+    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, false, prevQoE));
     player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => {
         saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}_.csv`);
         document.querySelector("#hasEnded").textContent = true;
