@@ -47,17 +47,21 @@ function HoBRule(config) {
     const DashMetrics = factory.getSingletonFactoryByName('DashMetrics');
     const dashMetrics = DashMetrics(context).getInstance();
 
-    console.log(dashMetrics);
+    // console.log(dashMetrics);
     let instance;
 
     let prevBitrate;
     let prevBitrateIndex;
-    let prevBufferError;
-    const prevLength = 20;
+    let prevBuffer;
+    let prevBufferDrain;
+    let prevPID;
+    const windowSize = 20;
+    const prevLengthPID = 20;
+    const chunkLength = 4;
 
     const factorP = 1;
     const factorI = 1;
-    const factorD = 0.4; // closer 0 one means more safe
+    const factorD = 1;
     // TODO: Determine better number
     const targetBuffer = 60;
     const redMinus = 20;
@@ -77,7 +81,9 @@ function HoBRule(config) {
 
         prevBitrate = [];
         prevBitrateIndex = [];
-        prevBufferError = [];
+        prevBuffer = [];
+        prevBufferDrain = [];
+        prevPID = [];
         state = startup;
     }
 
@@ -93,30 +99,22 @@ function HoBRule(config) {
 
     function onFragmentLoadingCompleted(e) {
         if (e && e.request && e.mediaType === 'video') {
-            // dequeue 
-            if (prevBufferError.length === prevLength
-                && prevBitrateIndex.length === prevLength
-                && prevBitrate.length == prevLength
-            ) {
-                prevBitrate.shift();
-                prevBitrateIndex.shift();
-                prevBufferError.shift();
-            } else {
-                console.log(prevBitrate.length, prevBitrateIndex.length, prevBufferError.length, prevLength);
-            }
-
             const bufferLevel = dashMetrics.getCurrentBufferLevel(e.mediaType);
-            console.log(bufferLevel);
 
-            // enqueue
             prevBitrate.push(e.request.bytesTotal);
             prevBitrateIndex.push(e.request.quality);
-            prevBufferError.push(bufferLevel - targetBuffer);
+            prevBuffer.push(bufferLevel);
+            prevPID.push(0);
 
-            console.log("completed fragment on load");
-            console.log(prevBitrate);
-            console.log(prevBitrateIndex);
-            console.log(prevBufferError);
+            // len-2 becasue len-1 === bufferLevel
+            const bufferDrain = chunkLength / (chunkLength - (bufferLevel - prevBuffer[prevBuffer.length - 2]));
+            prevBufferDrain.push(bufferDrain);
+
+            console.log(`Buffer level and drain ${bufferLevel}, ${bufferDrain}`);
+            // console.log("completed fragment on load");
+            // console.log(prevBitrate);
+            // console.log(prevBitrateIndex);
+            // console.log(prevBuffer);
         } else if (e.mediaType === "audio") {
         } else {
             console.log("error getting env on fragment loaded");
@@ -124,30 +122,48 @@ function HoBRule(config) {
         }
     }
 
-    function calcHarmonicMean(n, arr) {
+    function calcHarmonicMean(n, arr, err) {
         let value = 0;
-        for (let i = 0; i < arr.length; i++) {
-            value += (1 / arr[i]);
+        for (let i = arr.length - n; i < arr.length; i++) {
+            value += (1 / (arr[i] - err));
         }
         return n / value;
+    }
+
+    function calcEWMA(n, arr, alpha) {
+        const start = arr.length - n;
+        // prev is avg instead of arr[start] to avoid strong bias from arr[start]
+        let prev = calcHarmonicMean(n, arr, 0);
+
+        for (let i = start + 1; i < n; i++) {
+            prev = (alpha * arr[i + start]) + (1 - alpha) * prev;
+        }
+
+        return prev;
     }
 
     function sigmoid(x) {
         return Math.exp(x) / (Math.exp(x) + 1);
     }
 
+    // distance from goal
     function controllerP() {
-        const currBufferErrorInstance = prevBufferError[prevBufferError.length - 1];
-
-        return sigmoid(factorP * currBufferErrorInstance);
+        return factorP * (prevBuffer[prevBuffer.length - 1] - prevBuffer[prevBuffer.lengt - 2]);
     }
 
+    // moving avg distance traveled recently
     function controllerI() {
         return [
-            factorI * calcHarmonicMean(prevBitrate.length, prevBitrate),
-            factorI * calcHarmonicMean(prevBitrateIndex.length, prevBitrateIndex),
-            factorI * calcHarmonicMean(prevBufferError.length, prevBufferError)
+            factorI * calcHarmonicMean(windowSize, prevBitrate, 0),
+            factorI * calcHarmonicMean(windowSize, prevBitrateIndex, 0),
+            factorI * calcHarmonicMean(windowSize, prevBuffer, targetBuffer)
         ];
+    }
+
+    // exponential moving average of speed travelled
+    function controllerD() {
+        // 0.2 set by PANDA study
+        return calcEWMA(windowSize, prevBufferDrain, 0.2);
     }
 
     // function startupQuality(currThroughputSafe, currThroughput) {
@@ -163,6 +179,40 @@ function HoBRule(config) {
     //     return ((1 - factorD) * bufferDrainRateSafe) + (factorD * bufferDrainRate);
     // }
 
+
+    function bitrateToBuffer(bitrate) {
+        // inverse of sigmoid is just sigmoid
+        const bufferLevel = sigmoid(bitrate);
+        return bufferLevel;
+    }
+
+    function minBufferForBitrateLevel(bufferLevel, bitrateSet) {
+        const fakeBitrate = sigmoid(bufferLevel);
+        const bufferLevelLowerBound = getBitrateFromSet(fakeBitrate, bitrateSet);
+
+        return bufferLevel - bufferLevelLowerBound;
+    }
+
+    function getBitrateFromSet(bitrate, bitrateSet) {
+        let bitrateRoundedDown = -1;
+
+        let prevBitrate = 0;
+        for (let i = 0; i < bitrateSet.length; i++) {
+            if (bitrate < bitrateSet[i]) {
+                bitrateRoundedDown = prevBitrate;
+                break;
+            } else {
+                prevBitrate = bitrateSet[i];
+            }
+        }
+
+        if (bitrateRoundedDown === -1) {
+            console.log("error clamping bitrate");
+        }
+
+        return bitrateRoundedDown;
+    }
+
     function getSwitchRequest(rulesContext) {
         try {
             const mediaInfo = rulesContext.getMediaInfo();
@@ -174,13 +224,32 @@ function HoBRule(config) {
             const throughputHistory = abrController.getThroughputHistory();
             const throughputSafe = throughputHistory.getSafeAverageThroughput(mediaType, isDynamic);
 
-            const bufferLevel = prevBufferError[prevBufferError.length - 1] + targetBuffer;
+            const bufferLevel = prevBuffer[prevBuffer.length - 1];
+            const currBitrate = prevBitrate[prevBitrate.length - 1];
 
-            if (bufferLevel > yellowMinus) {
-                state = steady;
-            } else if (bufferLevel <= 1) {
-                state = startup;
-            }
+            // get PID
+            const errorAdjustment = controllerP() + Math.max(windowSize, Math.min(-1 * windowSize, controllerI() * controllerD()));
+            // convert bitrate to buffer projection partial
+            const bufferProjectionLowerBound = bitrateToBuffer(currBitrate);
+            // get diff of current buffer from and bitrate projection
+            const bufferDifferenceFromCurrBitrateBound = bufferLevel + minBufferForBitrateLevel(bufferLevel);
+            // add two (buffer projection partial + buffer diff) = projected buffer
+            // 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             let determinedQuality = prevBitrateIndex[prevBitrateIndex.length - 1];
             switch (state) {
@@ -196,6 +265,13 @@ function HoBRule(config) {
                     break;
             }
 
+            const p = controllerP();
+            const i = controllerI();
+
+
+
+            console.table([2 * p, i]);
+
             // final request
             let switchRequest = SwitchRequest(context).create();
             switchRequest.quality = determinedQuality;
@@ -210,7 +286,8 @@ function HoBRule(config) {
     function reset() {
         prevBitrate = [];
         prevBitrateIndex = [];
-        prevBufferError = [];
+        prevBuffer = [];
+        prevBufferDrain = [];
         state = startup;
     }
 
