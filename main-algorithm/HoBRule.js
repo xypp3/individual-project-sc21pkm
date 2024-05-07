@@ -146,9 +146,9 @@ function HoBRule(config) {
         return Math.exp(x) / (Math.exp(x) + 1);
     }
 
-    // distance from goal
+    // distance from goal from 0 to 1
     function controllerP() {
-        return factorP * (prevBuffer[prevBuffer.length - 1] - prevBuffer[prevBuffer.lengt - 2]);
+        return factorP * sigmoid(prevBuffer[prevBuffer.length - 1] - prevBuffer[prevBuffer.lengt - 2]);
     }
 
     // moving avg distance traveled recently
@@ -188,30 +188,46 @@ function HoBRule(config) {
 
     function minBufferForBitrateLevel(bufferLevel, bitrateSet) {
         const fakeBitrate = sigmoid(bufferLevel);
-        const bufferLevelLowerBound = getBitrateFromSet(fakeBitrate, bitrateSet);
+        const bufferLevelLowerBound = quantizeBitrate(fakeBitrate, bitrateSet);
 
         return bufferLevel - bufferLevelLowerBound;
     }
 
-    function getBitrateFromSet(bitrate, bitrateSet) {
-        let bitrateRoundedDown = -1;
+    function quantizeBitrate(bitrate, bitrateSet, deltaLower = 0, deltaUpper = 0) {
+        let specifiedBitrate = -1;
+        let bitrateIndex = -1;
 
         let prevBitrate = 0;
         for (let i = 0; i < bitrateSet.length; i++) {
             if (bitrate < bitrateSet[i]) {
-                bitrateRoundedDown = prevBitrate;
+                specifiedBitrate = prevBitrate;
+                bitrateIndex = i;
                 break;
             } else {
                 prevBitrate = bitrateSet[i];
             }
         }
 
-        if (bitrateRoundedDown === -1) {
+        if (specifiedBitrate === -1) {
             console.log("error clamping bitrate");
         }
 
-        return bitrateRoundedDown;
+        // Dead-zone quantizing
+        if (deltaLower > 0 || deltaUpper > 0) {
+            const next = bitrateIndex + 1;
+            const prev = bitrateIndex - 1;
+            if (next < bitrateSet.length
+                && next + (next * deltaUpper) <= bitrate) {
+                specifiedBitrate = bitrateSet[next];
+            } else if (prev >= 0
+                && bitrate <= bitrateSet[bitrateIndex] - (prev * deltaLower)) {
+                specifiedBitrate = bitrateSet[prev];
+            }
+        }
+
+        return specifiedBitrate;
     }
+
 
     function getSwitchRequest(rulesContext) {
         try {
@@ -228,13 +244,15 @@ function HoBRule(config) {
             const currBitrate = prevBitrate[prevBitrate.length - 1];
 
             // get PID
-            const errorAdjustment = controllerP() + Math.max(windowSize, Math.min(-1 * windowSize, controllerI() * controllerD()));
+            const errorAdjustment = controllerP() * Math.max(windowSize, Math.min(-1 * windowSize, controllerI() * controllerD()));
             // convert bitrate to buffer projection partial
             const bufferProjectionLowerBound = bitrateToBuffer(currBitrate);
             // get diff of current buffer from and bitrate projection
-            const bufferDifferenceFromCurrBitrateBound = bufferLevel + minBufferForBitrateLevel(bufferLevel);
+            const bufferDifferenceFromCurrBitrateBound = bufferLevel - minBufferForBitrateLevel(bufferLevel);
             // add two (buffer projection partial + buffer diff) = projected buffer
+            const bufferProjection = bufferProjectionLowerBound + bufferDifferenceFromCurrBitrateBound;
             // 
+            const newBitrate
 
 
 
