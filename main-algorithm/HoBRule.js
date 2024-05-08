@@ -104,10 +104,13 @@ function HoBRule(config) {
         return n / value;
     }
 
-    function calcEWMA(n, arr, alpha) {
+    function calcEWMA(n, arr, alpha, prev = 0) {
         const start = Math.max(0, arr.length - n);
+
         // prev is avg instead of arr[start] to avoid strong bias from arr[start]
-        let prev = calcHarmonicMean(n, arr, 0);
+        if (prev === 0) {
+            prev = calcHarmonicMean(n, arr, 0);
+        }
 
         for (let i = start + 1; i < arr.length; i++) {
             prev = (alpha * arr[i]) + (1 - alpha) * prev;
@@ -130,7 +133,7 @@ function HoBRule(config) {
     function controllerP() {
         const error = targetBuffer - prevBuffer[prevBuffer.length - 1];
         const proportionalError = 5 * (error / (BUFFER_MAX * 0.5));
-        return factorP * (2 * (sigmoid(proportionalError) - 0.5));
+        return factorP * (sigmoid(proportionalError));
     }
 
     // moving avg distance traveled recently
@@ -236,7 +239,8 @@ function HoBRule(config) {
             // // add two (buffer projection partial + buffer diff) = projected buffer
             const bufferProjection = bufferProjectionLowerBound + bufferDifferenceFromCurrBitrateBound;
             const newContinousBitrate = shiftSigmoid(bufferProjection - errorAdjustment, BUFFER_MAX, BITRATE_MAX);
-            const newBitrate = getBitrateIndex(quantizeBitrate(newContinousBitrate, bitrates, 0.1, 0), bitrates);
+            const smoothedBitrate = calcEWMA(10, prevBitrate, 0.2, newContinousBitrate);
+            const newBitrate = getBitrateIndex(quantizeBitrate(smoothedBitrate, bitrates, 0.1, 0), bitrates);
 
             console.log(`P: ${controllerP()}`);
             console.log(`I: ${controllerI()[2]}`);
@@ -247,6 +251,7 @@ function HoBRule(config) {
             console.log(`difference : ${bufferLevel}-${minBufferForBitrateLevel(bufferLevel, bitrates)} == ${bufferDifferenceFromCurrBitrateBound}`);
             console.log(`BufferProjection: ${bufferProjection}`);
             console.log(`newContinousBitrate: ${newContinousBitrate}`);
+            console.log("New smoothed bitrate !!!" + smoothedBitrate);
             console.log("New bitrate !!!" + newBitrate);
             // console.log(`Buffer projection: ${bufferProjection}`);
 
