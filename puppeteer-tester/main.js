@@ -5,6 +5,22 @@ bitrateConv.set('', '');
 
 let counter = 0;
 
+// Profiles gotten from BOLA paper:
+// <https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9110784>
+const networkSettings = {
+	profile1:
+	{
+		name: "Profile_1",
+		profileArr: [[5, 38], [4, 50], [3, 75], [2, 88], [1.5, 100], [2, 88], [3, 75], [4, 50]]
+	},
+	profile2:
+	{
+		name: "Profile_2",
+		profileArr: [[1.5, 100], [2, 88], [3, 75], [4, 50], [5, 38], [4, 50], [3, 75], [2, 88]]
+	}
+};
+
+
 // const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const pollHasEnded = (milliseconds, page, foo) => new Promise((resolve) => {
 	foo();
@@ -51,22 +67,22 @@ async function networkThrottleForSec(page, Mbis, latency) {
 
 	// setup
 	let rule = "BBARule";
-	const desc = "Network 1";
-	const mbisList = [[5, 38], [4, 50], [3, 75], [2, 88], [1.5, 100], [2, 88], [3, 75], [4, 50]];
+	const profile = networkSettings.profile1;
+	const desc = profile.name;
+	const mbisList = profile.profileArr;
 
 	await page.type("#selectRule", rule);
 	await page.type("#text-sim-desc", desc);
 	await page.click("button");
 
 
-	await pollHasEnded(3000, page, () => {
+	await pollHasEnded(30 * 1000, page, () => {
 		let mbis = mbisList[counter % mbisList.length][0] * 1000 * 1000; // convert to bytes
 		let latency = mbisList[counter % mbisList.length][1];
 		console.log(`Mbis: ${mbis}  Latency: ${latency}`);
 
 		networkThrottleForSec(page, mbis, latency);
 	});
-	console.log("done intervalling");
 
 
 
