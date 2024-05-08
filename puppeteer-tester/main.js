@@ -3,9 +3,13 @@ import puppeteer from 'puppeteer';
 const bitrateConv = new Map();
 bitrateConv.set('', '');
 
-const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+let counter = 0;
+
+// const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const pollHasEnded = (milliseconds, page, foo) => new Promise((resolve) => {
 	foo();
+	counter += 1;
+
 	const intId = setInterval(async () => {
 		await page.waitForSelector("#hasEnded");
 		const element = await page.$('#hasEnded');
@@ -17,147 +21,25 @@ const pollHasEnded = (milliseconds, page, foo) => new Promise((resolve) => {
 		}
 
 		foo();
+		counter += 1;
 		console.log("loser");
 	}, milliseconds);
 });
 
-async function applyProfile(page, mbisList) {
-	let mbis;
-	let latency;
-	let i = 0;
 
-	console.log("network: " + mbis + " " + latency);
-	// i 0
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-	console.log("network: " + mbis + " " + latency);
-
-	// i 1
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-	console.log("network: " + mbis + " " + latency);
-
-	// i 2
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-	console.log("network: " + mbis + " " + latency);
-
-	// i 3
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-	console.log("network: " + mbis + " " + latency);
-
-	// i 4
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-	console.log("network: " + mbis + " " + latency);
-
-	// i 5
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-	console.log("network: " + mbis + " " + latency);
-
-	// i 6
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-	console.log("network: " + mbis + " " + latency);
-
-	// i 7
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 8
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 9
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 10
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 11
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 12
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 13
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 14
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 15
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 16
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 17
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 18
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-
-	// i 19
-	mbis = mbisList[i % mbisList.length][0] * 1000 * 1000; // convert to bytes
-	latency = mbisList[i % mbisList.length][1];
-	await networkThrottleForSec(page, mbis, latency);
-	i += 1;
-}
 
 async function networkThrottleForSec(page, Mbis, latency) {
 	await page.emulateNetworkConditions({ download: Mbis, latency: latency, upload: Mbis });
-	await delay(5 * 1000);
+
+	const mbisInput = await page.$("#Mbis");
+	// select input to clear when typing
+	await mbisInput.click({ clickCount: 3 })
+	await mbisInput.type("" + Mbis);
+
+	const latencyInput = await page.$("#latency");
+	// select input to clear when typing
+	await latencyInput.click({ clickCount: 3 })
+	await latencyInput.type("" + latency);
 }
 
 (async () => {
@@ -169,15 +51,22 @@ async function networkThrottleForSec(page, Mbis, latency) {
 
 	// setup
 	let rule = "BBARule";
+	const desc = "Network 1";
+	const mbisList = [[5, 38], [4, 50], [3, 75], [2, 88], [1.5, 100], [2, 88], [3, 75], [4, 50]];
+
 	await page.type("#selectRule", rule);
-	let desc = "9Mbi-per-sec";
 	await page.type("#text-sim-desc", desc);
 	await page.click("button");
 
-	applyProfile(page, [[5, 38], [4, 50], [3, 75], [2, 88]]);
-	await pollHasEnded(1000, page, () => { console.log("hi") });
+
+	await pollHasEnded(3000, page, () => {
+		let mbis = mbisList[counter % mbisList.length][0] * 1000 * 1000; // convert to bytes
+		let latency = mbisList[counter % mbisList.length][1];
+		console.log(`Mbis: ${mbis}  Latency: ${latency}`);
+
+		networkThrottleForSec(page, mbis, latency);
+	});
 	console.log("done intervalling");
-	// applyProfile(page, [[5, 38], [4, 50], [3, 75], [2, 88]]);
 
 
 

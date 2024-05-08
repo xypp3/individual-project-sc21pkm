@@ -3,6 +3,9 @@ import RandomBitrateRule from "./RandomBitrateRule.js";
 import BBARule from "./BBARule.js";
 import HoBRule from "./HoBRule.js";
 
+let bandwidth = 0;
+let latency = 0;
+
 function calculateQoE(prevQoE, currBuffer, currBitrate) {
     if (prevQoE.k < 2) {
         prevQoE.k += 1;
@@ -56,15 +59,19 @@ function getMetrics(player, array, logging, prevQoE) {
                     console.log(playbackTime + "secs");
                     console.log("QoE: " + qoe);
                     console.log(resolution);
+                    console.log("Bandwidth: " + bandwidth);
+                    console.log("Latency: " + latency);
                 }
 
-                array.push(array.length / 6);
+                array.push(array.length / 8);
                 array.push(bufferLevel);
                 // this is the bitrate for the fragment at (bufferLevel + playbackTime)
                 //      where a fragment is smaller than a chunk +-1sec where a chunk now is 4sec
                 array.push(bitrate);
                 array.push(playbackTime);
                 array.push(qoe);
+                array.push(bandwidth);
+                array.push(latency);
                 array.push(`"${resolution}"`);
             }
         } catch {
@@ -76,12 +83,12 @@ function getMetrics(player, array, logging, prevQoE) {
 
 
 function arrayToCsv(array) {
-    let arrayLen = 6;
+    let arrayLen = 8;
     if (array.length % arrayLen != 0) {
         return "data format is wrong, abort CSV conversion";
     }
 
-    let str = "Index, Buffer Level, Bitrate, Playback Timestamp, QoE, Resolution\n";
+    let str = "Index, Buffer Level, Bitrate, Playback Timestamp, QoE, Bandwidth, Latency, Resolution\n";
     if (str.match(new RegExp(",", "g")).length != arrayLen - 1) {
         return "data column titles don't match the number of data columns";
     }
@@ -198,7 +205,7 @@ document.querySelector("button").addEventListener("click", () => {
         "prevBitrate": 0
     };
 
-    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, false, prevQoE));
+    player.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], getMetrics(player, array, true, prevQoE));
     player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], (e) => {
         saveTextAsFile(arrayToCsv(array), `dashjs_data_${ruleName}_${simulationDesc}_.csv`);
         document.querySelector("#hasEnded").textContent = true;
@@ -207,3 +214,13 @@ document.querySelector("button").addEventListener("click", () => {
 
     player.initialize(document.querySelector("video"), url, true);
 });
+
+const mbisElement = document.querySelector("#Mbis");
+mbisElement.addEventListener("input", (e) => {
+    bandwidth = parseInt(e.target.value);
+});
+const latencyElement = document.querySelector("#latency");
+latencyElement.addEventListener("input", (e) => {
+    latency = parseInt(e.target.value);
+});
+
