@@ -2,6 +2,7 @@ import dashjs from "dashjs";
 import RandomBitrateRule from "./RandomBitrateRule.js";
 import BBARule from "./BBARule.js";
 import HoBRule from "./HoBRule.js";
+import ThroughputPrediction from "./ThroughputPrediction.js";
 
 let bandwidth = 0;
 let latency = 0;
@@ -176,6 +177,10 @@ document.querySelector("#selectRule").addEventListener("change", (e) => {
         console.log("selected HoBRule");
         ruleName = selected;
         rule = HoBRule;
+    } else if (selected === "ThroughputPrediction") {
+        console.log("selected ThroughputPrediction");
+        ruleName = selected;
+        rule = ThroughputPrediction;
     } else {
         console.log("Rule not selected");
     }
