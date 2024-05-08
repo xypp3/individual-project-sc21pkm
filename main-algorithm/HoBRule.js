@@ -1,35 +1,3 @@
-/**
- * The copyright in this software is being made available under the BSD License,
- * included below. This software may be subject to other third party and contributor
- * rights, including patent rights, and no such rights are granted under this license.
- *
- * Copyright (c) 2013, Dash Industry Forum.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *  * Redistributions of source code must retain the above copyright notice, this
- *  list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *  this list of conditions and the following disclaimer in the documentation and/or
- *  other materials provided with the distribution.
- *  * Neither the name of Dash Industry Forum nor the names of its
- *  contributors may be used to endorse or promote products derived from this software
- *  without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
- *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- */
-
-
 function HoBRule(config) {
 
     // for some reason config is always empty (haven't dug into lib to find out why)
@@ -70,6 +38,7 @@ function HoBRule(config) {
     const yellowPlus = 70;
     const redPlus = 90;
     const BUFFER_MAX = 120;
+    const BITRATE_MAX = 14931538;
 
     const startup = 111;
     const steady = 222;
@@ -107,7 +76,7 @@ function HoBRule(config) {
             prevPID.push(0);
 
             // len-2 becasue len-1 === bufferLevel
-            const bufferDrain = Math.min(100, (chunkLength / (chunkLength - (bufferLevel - prevBuffer[prevBuffer.length - 2]))) || 0);
+            const bufferDrain = Math.max(-20, Math.min(20, (chunkLength / (chunkLength - (bufferLevel - prevBuffer[prevBuffer.length - 2]))) || 0));
 
             prevBufferDrain.push(bufferDrain);
 
@@ -151,6 +120,12 @@ function HoBRule(config) {
         return Math.exp(x) / (Math.exp(x) + 1);
     }
 
+    function shiftSigmoid(x, maxX, maxY) {
+        const a = sigmoid(x / maxX * 10);
+
+        return a * maxY;
+    }
+
     // distance from goal from 0 to 1
     function controllerP() {
         const error = targetBuffer - prevBuffer[prevBuffer.length - 1];
@@ -173,29 +148,16 @@ function HoBRule(config) {
         return calcEWMA(windowSize, prevBufferDrain, 0.2);
     }
 
-    // function startupQuality(currThroughputSafe, currThroughput) {
-    //     const bufferDrainRateSafe = (currThroughputSafe / prevBitrate[prevBitrate.length - 1]);
-    //     const bufferDrainRate = (currThroughput / prevBitrate[prevBitrate.length - 1]);
-    //     console.log("buffer fill ratio safe:" + bufferDrainRateSafe);
-    //     console.log("buffer fill ratio:" + bufferDrainRate);
-    //
-    //     if (factorD >= 0 || 1 < factorD) {
-    //         console.error("factorD must be greater than zero 0 AND less than or equal to 1, it is: " + factorD);
-    //     }
-    //
-    //     return ((1 - factorD) * bufferDrainRateSafe) + (factorD * bufferDrainRate);
-    // }
-
-
     function bitrateToBuffer(bitrate) {
         // inverse of sigmoid is just sigmoid
-        const bufferLevel = sigmoid(bitrate);
+        const bufferLevel = shiftSigmoid(bitrate, BITRATE_MAX, BUFFER_MAX);
         return bufferLevel;
     }
 
     function minBufferForBitrateLevel(bufferLevel, bitrateSet) {
-        const fakeBitrate = sigmoid(bufferLevel);
-        const bufferLevelLowerBound = quantizeBitrate(fakeBitrate, bitrateSet);
+        const fakeBitrateContinious = shiftSigmoid(bufferLevel, BUFFER_MAX, BITRATE_MAX);
+        const fakeBitrate = quantizeBitrate(fakeBitrateContinious, bitrateSet);
+        const bufferLevelLowerBound = shiftSigmoid(fakeBitrate, BITRATE_MAX, BUFFER_MAX);
 
         return bufferLevel - bufferLevelLowerBound;
     }
@@ -235,6 +197,14 @@ function HoBRule(config) {
         return specifiedBitrate;
     }
 
+    function getBitrateIndex(bitrate, bitrateSet) {
+        for (let i = 0; i < bitrateSet.length; i++) {
+            if (bitrate == bitrateSet[i]) {
+                return i;
+            }
+        }
+    }
+
 
     function getSwitchRequest(rulesContext) {
         try {
@@ -246,73 +216,51 @@ function HoBRule(config) {
             const abrController = rulesContext.getAbrController();
             const throughputHistory = abrController.getThroughputHistory();
             const throughputSafe = throughputHistory.getSafeAverageThroughput(mediaType, isDynamic);
+            var bitrates = mediaInfo.bitrateList.map(function(b) {
+                return b.bandwidth;
+            });
+            console.log(`All bitrates: ${bitrates}`);
 
             const bufferLevel = prevBuffer[prevBuffer.length - 1];
             const currBitrate = prevBitrate[prevBitrate.length - 1];
 
             // get PID
             const errorID = Math.max(windowSize, Math.min(-1 * windowSize, controllerI()[2] * controllerD()));
-            // const errorAdjustment = controllerP() * errorID;
-            // // convert bitrate to buffer projection partial
-            // const bufferProjectionLowerBound = bitrateToBuffer(currBitrate);
-            // // get diff of current buffer from and bitrate projection
-            // const bufferDifferenceFromCurrBitrateBound = bufferLevel - minBufferForBitrateLevel(bufferLevel);
+            const errorAdjustment = controllerP() * errorID;
+            // convert bitrate to buffer projection partial
+            const bufferProjectionLowerBound = bitrateToBuffer(currBitrate);
+            // get diff of current buffer from and bitrate projection
+            const minBuffer = minBufferForBitrateLevel(bufferLevel, bitrates);
+            const bufferDifferenceFromCurrBitrateBound = bufferLevel + minBuffer;
+
             // // add two (buffer projection partial + buffer diff) = projected buffer
-            // const bufferProjection = bufferProjectionLowerBound + bufferDifferenceFromCurrBitrateBound;
-            //
-            // let nextBitrate = currBitrate;
-            // // P desired direction ID is predicted direction
-            // // + + (keep at it)
-            // // - - (keep at it)
-            // if (errorAdjustment > 0) {
-            //     nextBitrate = sigmoid(bufferProjection + errorID);
-            // }
+            const bufferProjection = bufferProjectionLowerBound + bufferDifferenceFromCurrBitrateBound;
+            const newContinousBitrate = shiftSigmoid(bufferProjection - errorAdjustment, BUFFER_MAX, BITRATE_MAX);
+            const newBitrate = getBitrateIndex(quantizeBitrate(newContinousBitrate, bitrates, 0.1, 0), bitrates);
+
             console.log(`P: ${controllerP()}`);
             console.log(`I: ${controllerI()[2]}`);
             console.log(`D: ${controllerD()}`);
             console.log(prevBufferDrain);
             console.log(`ErrorID: ${errorID}`);
+            console.log(`lower bound: ${bufferProjectionLowerBound}`);
+            console.log(`difference : ${bufferLevel}-${minBufferForBitrateLevel(bufferLevel, bitrates)} == ${bufferDifferenceFromCurrBitrateBound}`);
+            console.log(`BufferProjection: ${bufferProjection}`);
+            console.log(`newContinousBitrate: ${newContinousBitrate}`);
+            console.log("New bitrate !!!" + newBitrate);
             // console.log(`Buffer projection: ${bufferProjection}`);
-            // - + (want to be less but rate is high? increase BR)
-            // + - (want to be more but rate is low? decrease BR)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
             let determinedQuality = prevBitrateIndex[prevBitrateIndex.length - 1];
-            switch (state) {
-                case startup:
-                    determinedQuality = abrController.getQualityForBitrate(mediaInfo, throughputSafe, streamId);
-                    break;
-                case steady:
-                    console.log("steady");
-                    break;
-                default:
-                    console.error("in unknown buffer state");
-                    state = startup;
-                    break;
-            }
+            determinedQuality = abrController.getQualityForBitrate(mediaInfo, throughputSafe, streamId);
+            console.log("ACTUAL bitrate !!!" + determinedQuality);
 
-            const p = controllerP();
-            const i = controllerI();
+
 
             // console.table(["hello", p, i[2], prevBuffer]);
 
             // final request
             let switchRequest = SwitchRequest(context).create();
-            switchRequest.quality = determinedQuality;
+            switchRequest.quality = newBitrate;
             switchRequest.reason = 'Switch according to HoB, health of buffer';
             switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
             return switchRequest;
