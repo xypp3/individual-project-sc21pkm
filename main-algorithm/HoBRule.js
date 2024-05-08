@@ -69,7 +69,7 @@ function HoBRule(config) {
     const green = 50;
     const yellowPlus = 70;
     const redPlus = 90;
-    const bufferMax = 100;
+    const BUFFER_MAX = 120;
 
     const startup = 111;
     const steady = 222;
@@ -79,10 +79,10 @@ function HoBRule(config) {
         eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_ABANDONED"], onFragmentLoadingAbandoned, instance);
         eventBus.on(dashjs.MediaPlayer.events["FRAGMENT_LOADING_COMPLETED"], onFragmentLoadingCompleted, instance);
 
-        prevBitrate = [];
-        prevBitrateIndex = [];
-        prevBuffer = [];
-        prevBufferDrain = [];
+        prevBitrate = [0, 0];
+        prevBitrateIndex = [0, 0];
+        prevBuffer = [0, 0];
+        prevBufferDrain = [0, 0];
         prevPID = [];
         state = startup;
     }
@@ -107,7 +107,8 @@ function HoBRule(config) {
             prevPID.push(0);
 
             // len-2 becasue len-1 === bufferLevel
-            const bufferDrain = chunkLength / (chunkLength - (bufferLevel - prevBuffer[prevBuffer.length - 2]));
+            const bufferDrain = Math.min(100, (chunkLength / (chunkLength - (bufferLevel - prevBuffer[prevBuffer.length - 2]))) || 0);
+
             prevBufferDrain.push(bufferDrain);
 
             console.log(`Buffer level and drain ${bufferLevel}, ${bufferDrain}`);
@@ -123,20 +124,24 @@ function HoBRule(config) {
     }
 
     function calcHarmonicMean(n, arr, err) {
+        if (arr.length === 0) {
+            return 0;
+        }
+
         let value = 0;
-        for (let i = arr.length - n; i < arr.length; i++) {
+        for (let i = Math.max(0, arr.length - n); i < arr.length; i++) {
             value += (1 / (arr[i] - err));
         }
         return n / value;
     }
 
     function calcEWMA(n, arr, alpha) {
-        const start = arr.length - n;
+        const start = Math.max(0, arr.length - n);
         // prev is avg instead of arr[start] to avoid strong bias from arr[start]
         let prev = calcHarmonicMean(n, arr, 0);
 
-        for (let i = start + 1; i < n; i++) {
-            prev = (alpha * arr[i + start]) + (1 - alpha) * prev;
+        for (let i = start + 1; i < arr.length; i++) {
+            prev = (alpha * arr[i]) + (1 - alpha) * prev;
         }
 
         return prev;
@@ -148,7 +153,9 @@ function HoBRule(config) {
 
     // distance from goal from 0 to 1
     function controllerP() {
-        return factorP * sigmoid(prevBuffer[prevBuffer.length - 1] - prevBuffer[prevBuffer.lengt - 2]);
+        const error = targetBuffer - prevBuffer[prevBuffer.length - 1];
+        const proportionalError = 5 * (error / (BUFFER_MAX * 0.5));
+        return factorP * (2 * (sigmoid(proportionalError) - 0.5));
     }
 
     // moving avg distance traveled recently
@@ -156,7 +163,7 @@ function HoBRule(config) {
         return [
             factorI * calcHarmonicMean(windowSize, prevBitrate, 0),
             factorI * calcHarmonicMean(windowSize, prevBitrateIndex, 0),
-            factorI * calcHarmonicMean(windowSize, prevBuffer, targetBuffer)
+            factorI * Math.abs(calcHarmonicMean(windowSize, prevBuffer, targetBuffer))
         ];
     }
 
@@ -244,15 +251,30 @@ function HoBRule(config) {
             const currBitrate = prevBitrate[prevBitrate.length - 1];
 
             // get PID
-            const errorAdjustment = controllerP() * Math.max(windowSize, Math.min(-1 * windowSize, controllerI() * controllerD()));
-            // convert bitrate to buffer projection partial
-            const bufferProjectionLowerBound = bitrateToBuffer(currBitrate);
-            // get diff of current buffer from and bitrate projection
-            const bufferDifferenceFromCurrBitrateBound = bufferLevel - minBufferForBitrateLevel(bufferLevel);
-            // add two (buffer projection partial + buffer diff) = projected buffer
-            const bufferProjection = bufferProjectionLowerBound + bufferDifferenceFromCurrBitrateBound;
-            // 
-            const newBitrate
+            const errorID = Math.max(windowSize, Math.min(-1 * windowSize, controllerI()[2] * controllerD()));
+            // const errorAdjustment = controllerP() * errorID;
+            // // convert bitrate to buffer projection partial
+            // const bufferProjectionLowerBound = bitrateToBuffer(currBitrate);
+            // // get diff of current buffer from and bitrate projection
+            // const bufferDifferenceFromCurrBitrateBound = bufferLevel - minBufferForBitrateLevel(bufferLevel);
+            // // add two (buffer projection partial + buffer diff) = projected buffer
+            // const bufferProjection = bufferProjectionLowerBound + bufferDifferenceFromCurrBitrateBound;
+            //
+            // let nextBitrate = currBitrate;
+            // // P desired direction ID is predicted direction
+            // // + + (keep at it)
+            // // - - (keep at it)
+            // if (errorAdjustment > 0) {
+            //     nextBitrate = sigmoid(bufferProjection + errorID);
+            // }
+            console.log(`P: ${controllerP()}`);
+            console.log(`I: ${controllerI()[2]}`);
+            console.log(`D: ${controllerD()}`);
+            console.log(prevBufferDrain);
+            console.log(`ErrorID: ${errorID}`);
+            // console.log(`Buffer projection: ${bufferProjection}`);
+            // - + (want to be less but rate is high? increase BR)
+            // + - (want to be more but rate is low? decrease BR)
 
 
 
@@ -286,9 +308,7 @@ function HoBRule(config) {
             const p = controllerP();
             const i = controllerI();
 
-
-
-            console.table([2 * p, i]);
+            // console.table(["hello", p, i[2], prevBuffer]);
 
             // final request
             let switchRequest = SwitchRequest(context).create();
