@@ -16,7 +16,17 @@ const networkSettings = {
 	profile2:
 	{
 		name: "Profile_2",
-		profileArr: [[1.5, 100], [2, 88], [3, 75], [4, 50], [5, 38], [4, 50], [3, 75], [2, 88]]
+		profileArr: [[5, 13], [4, 18], [3, 28], [2, 58], [1.5, 200], [2, 58], [3, 28], [4, 18]]
+	},
+	profile3:
+	{
+		name: "Profile_3",
+		profileArr: [[9, 25], [4, 50], [2, 75], [1, 100], [2, 75], [4, 50]]
+	},
+	profile4:
+	{
+		name: "Profile_4",
+		profileArr: [[9, 10], [4, 50], [2, 150], [1, 200], [2, 150], [4, 50]]
 	}
 };
 
@@ -38,7 +48,7 @@ const pollHasEnded = (milliseconds, page, foo) => new Promise((resolve) => {
 
 		foo();
 		counter += 1;
-		console.log("loser");
+		// console.log("loser");
 	}, milliseconds);
 });
 
@@ -66,8 +76,11 @@ async function networkThrottleForSec(page, Mbis, latency) {
 	await page.setViewport({ width: 1080, height: 1024 });
 
 	// setup
-	let rule = "BBARule";
-	const profile = networkSettings.profile1;
+	const BBA = "BBARule";
+	const HOB = "HoBRule";
+	const THROUGHPUT = "ThroughputRule";
+	let rule = BBA;
+	const profile = networkSettings.profile2;
 	const desc = profile.name;
 	const mbisList = profile.profileArr;
 
@@ -75,11 +88,13 @@ async function networkThrottleForSec(page, Mbis, latency) {
 	await page.type("#text-sim-desc", desc);
 	await page.click("button");
 
+	console.log("Running with this rule: " + rule);
+	console.log("Running with this profile: " + desc);
 
 	await pollHasEnded(30 * 1000, page, () => {
 		let mbis = mbisList[counter % mbisList.length][0] * 1000 * 1000; // convert to bytes
 		let latency = mbisList[counter % mbisList.length][1];
-		console.log(`Mbis: ${mbis}  Latency: ${latency}`);
+		// console.log(`Mbis: ${mbis}  Latency: ${latency}`);
 
 		networkThrottleForSec(page, mbis, latency);
 	});
@@ -88,4 +103,5 @@ async function networkThrottleForSec(page, Mbis, latency) {
 
 	await browser.close();
 
+	console.log("DONE");
 })();
