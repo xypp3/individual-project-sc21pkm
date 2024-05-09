@@ -131,9 +131,12 @@ function HoBRule(config) {
 
     // distance from goal from 0 to 1
     function controllerP() {
-        const error = targetBuffer - prevBuffer[prevBuffer.length - 1];
-        const proportionalError = 5 * (error / (BUFFER_MAX * 0.5));
-        return factorP * (sigmoid(proportionalError));
+        const error = prevBuffer[prevBuffer.length - 1] - targetBuffer;
+        console.log("buffer error: " + error);
+        const proportionalError = 5 * (error / (BUFFER_MAX));
+        console.log("proprional error: " + proportionalError);
+        console.log("sigmoid error: " + sigmoid(proportionalError));
+        return factorP * (sigmoid(proportionalError) - 0.5);
     }
 
     // moving avg distance traveled recently
@@ -228,7 +231,7 @@ function HoBRule(config) {
             const currBitrate = prevBitrate[prevBitrate.length - 1];
 
             // get PID
-            const errorID = Math.max(windowSize, Math.min(-1 * windowSize, controllerI()[2] * controllerD()));
+            const errorID = Math.min(windowSize, Math.max(-1 * windowSize, controllerI()[2] * controllerD()));
             const errorAdjustment = controllerP() * errorID;
             // convert bitrate to buffer projection partial
             const bufferProjectionLowerBound = bitrateToBuffer(currBitrate);
@@ -239,8 +242,10 @@ function HoBRule(config) {
             // // add two (buffer projection partial + buffer diff) = projected buffer
             const bufferProjection = bufferProjectionLowerBound + bufferDifferenceFromCurrBitrateBound;
             const newContinousBitrate = shiftSigmoid(bufferProjection - errorAdjustment, BUFFER_MAX, BITRATE_MAX);
-            const smoothedBitrate = calcEWMA(10, prevBitrate, 0.2, newContinousBitrate);
-            const newBitrate = getBitrateIndex(quantizeBitrate(smoothedBitrate, bitrates, 0.1, 0), bitrates);
+            const smoothedBitrate = calcEWMA(5, prevBitrate, 0.5, newContinousBitrate);
+            let newBitrate = getBitrateIndex(quantizeBitrate(smoothedBitrate, bitrates, 0.1, 0), bitrates);
+
+
 
             console.log(`P: ${controllerP()}`);
             console.log(`I: ${controllerI()[2]}`);

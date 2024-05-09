@@ -1,6 +1,8 @@
 node_modules
 venv
 
+*content*
+
 # reference libraries
 dash.all.debug.js
 pnpm-lock.yaml

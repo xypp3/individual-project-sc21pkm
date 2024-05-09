@@ -79,8 +79,8 @@ async function networkThrottleForSec(page, Mbis, latency) {
 	const BBA = "BBARule";
 	const HOB = "HoBRule";
 	const THROUGHPUT = "ThroughputRule";
-	let rule = BBA;
-	const profile = networkSettings.profile2;
+	let rule = THROUGHPUT;
+	const profile = networkSettings.profile4;
 	const desc = profile.name;
 	const mbisList = profile.profileArr;
 
